@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Northwind — E-commerce, Reimagined</title>
+<meta name="description" content="Northwind is an e-commerce company connecting buyers and sellers across the globe — storefronts, fulfilment, payments and growth under one roof." />
+
+<!-- Fonts: Poppins (headings) + Inter (body) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+
+<!-- Animate.css — https://animate.style/ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          base:  '#090A14',   // page background
+          panel: '#0E1020',   // card surface
+          field: '#12142A',   // input surface
+          line:  '#22243C',   // borders
+          brand: {
+            DEFAULT: '#DF6B33',
+            hover:   '#E77E4A',
+            soft:    '#F0A379',
+            deep:    '#A94A1D',
+          },
+          ink:   '#F4F5FA',   // primary text
+          muted: '#8B90A8',   // secondary text
+          danger: {
+            DEFAULT: '#FF5D64',
+            soft:    '#FF8A90',
+            faint:   '#2A1420',
+          },
+        },
+        fontFamily: {
+          display: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          sans:    ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        },
+        boxShadow: {
+          glow: '0 0 0 1px rgba(223,107,51,.35), 0 12px 40px -12px rgba(223,107,51,.55)',
+          card: '0 24px 70px -30px rgba(0,0,0,.9)',
+        },
+        keyframes: {
+          rise: {
+            '0%':   { opacity: '0', transform: 'translateY(14px)' },
+            '100%': { opacity: '1', transform: 'translateY(0)' },
+          },
+          float: {
+            '0%, 100%': { transform: 'translateY(0)' },
+            '50%':      { transform: 'translateY(-10px)' },
+          },
+        },
+        animation: {
+          rise:  'rise .55s cubic-bezier(.22,1,.36,1) both',
+          float: 'float 6s ease-in-out infinite',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  html { -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+  body { background-color: #090A14; }
+
+  ::selection { background: rgba(223,107,51,.3); color: #fff; }
+
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: #090A14; }
+  ::-webkit-scrollbar-thumb { background: #22243C; border-radius: 999px; border: 3px solid #090A14; }
+  ::-webkit-scrollbar-thumb:hover { background: #33365A; }
+
+  [data-lucide] { stroke-width: 1.9; }
+
+  /* Image frame: brand-tinted hairline + soft inner shadow */
+  .img-frame {
+    position: relative; overflow: hidden; border-radius: 1rem;
+    border: 1px solid #22243C; background: #12142A;
+  }
+  .img-frame img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.22,1,.36,1); }
+  .img-frame:hover img { transform: scale(1.045); }
+  .img-frame::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(9,10,20,0) 45%, rgba(9,10,20,.55) 100%);
+  }
+
+  /* ============================================================
+     MOTION LAYER
+     ============================================================ */
+
+  /* --- Reveal-on-scroll: direction + stagger via --i --- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity .8s cubic-bezier(.22,1,.36,1),
+      transform .8s cubic-bezier(.22,1,.36,1);
+    transition-delay: calc(var(--i, 0) * 90ms);
+    will-change: opacity, transform;
+  }
+  .reveal.from-left  { transform: translateX(-40px); }
+  .reveal.from-right { transform: translateX(40px); }
+  .reveal.zoom       { transform: scale(.92); }
+  .reveal.in         { opacity: 1; transform: none; }
+
+  /* --- Aurora: slowly drifting colour fields behind the hero --- */
+  .aurora {
+    position: absolute; inset: -20% -10% auto -10%; height: 120%;
+    z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .aurora span {
+    position: absolute; border-radius: 9999px; filter: blur(90px);
+    opacity: .5; mix-blend-mode: screen;
+    will-change: transform;
+  }
+  .aurora span:nth-child(1) {
+    width: 34rem; height: 34rem; left: -6rem; top: -4rem;
+    background: radial-gradient(circle at 30% 30%, rgba(223,107,51,.85), transparent 62%);
+    animation: drift-a 22s ease-in-out infinite alternate;
+  }
+  .aurora span:nth-child(2) {
+    width: 30rem; height: 30rem; right: 4rem; top: 2rem;
+    background: radial-gradient(circle at 60% 40%, rgba(169,74,29,.8), transparent 64%);
+    animation: drift-b 26s ease-in-out infinite alternate;
+  }
+  .aurora span:nth-child(3) {
+    width: 26rem; height: 26rem; left: 38%; top: 18rem;
+    background: radial-gradient(circle at 50% 50%, rgba(240,163,121,.55), transparent 66%);
+    animation: drift-c 30s ease-in-out infinite alternate;
+  }
+  @keyframes drift-a {
+    0%   { transform: translate3d(0,0,0) scale(1); }
+    50%  { transform: translate3d(6rem,-3rem,0) scale(1.12); }
+    100% { transform: translate3d(-3rem,4rem,0) scale(.96); }
+  }
+  @keyframes drift-b {
+    0%   { transform: translate3d(0,0,0) scale(1.05); }
+    50%  { transform: translate3d(-5rem,5rem,0) scale(.94); }
+    100% { transform: translate3d(3rem,-2rem,0) scale(1.16); }
+  }
+  @keyframes drift-c {
+    0%   { transform: translate3d(0,0,0) scale(.95); }
+    100% { transform: translate3d(-7rem,-4rem,0) scale(1.1); }
+  }
+
+  /* --- Animated brand gradient text --- */
+  .grad-text {
+    background: linear-gradient(100deg, #F0A379 0%, #DF6B33 28%, #A94A1D 50%, #DF6B33 72%, #F0A379 100%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    animation: grad-pan 8s ease-in-out infinite;
+  }
+  @keyframes grad-pan {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+
+  /* --- Marquee: infinite logo strip --- */
+  .marquee { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+  .marquee__track { display: flex; width: max-content; animation: marquee 28s linear infinite; }
+  .marquee:hover .marquee__track { animation-play-state: paused; }
+  .marquee__group { display: flex; align-items: center; gap: 3.5rem; padding-right: 3.5rem; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* --- Counter (numbers animate up when scrolled into view) --- */
+  .count { font-variant-numeric: tabular-nums; }
+
+  /* --- Sheen sweep on primary CTAs --- */
+  .sheen { position: relative; overflow: hidden; }
+  .sheen::before {
+    content: ''; position: absolute; top: 0; left: -75%; width: 50%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.42), transparent);
+    transform: skewX(-18deg); pointer-events: none;
+  }
+  .sheen:hover::before { animation: sheen 900ms ease; }
+  @keyframes sheen { to { left: 125%; } }
+
+  /* --- Card lift + glow ring --- */
+  .lift { transition: transform .35s cubic-bezier(.22,1,.36,1), border-color .35s ease, box-shadow .35s ease; }
+  .lift:hover {
+    transform: translateY(-6px);
+    border-color: rgba(223,107,51,.45);
+    box-shadow: 0 26px 50px -26px rgba(223,107,51,.55), 0 0 0 1px rgba(223,107,51,.18);
+  }
+  .lift:hover .icon-pop { transform: translateY(-2px) rotate(-6deg) scale(1.08); }
+  .icon-pop { transition: transform .35s cubic-bezier(.34,1.56,.64,1); }
+
+  /* --- Hero image: parallax (JS-driven via --px/--py) + 3D tilt --- */
+  .tilt-stage { perspective: 1200px; }
+  .tilt {
+    transform-style: preserve-3d;
+    transform:
+      translate3d(calc(var(--px, 0) * 1px), calc(var(--py, 0) * 1px), 0)
+      rotateX(calc(var(--ry, 0) * 1deg))
+      rotateY(calc(var(--rx, 0) * 1deg));
+    transition: transform .25s cubic-bezier(.22,1,.36,1);
+  }
+  .tilt .img-frame { box-shadow: 0 34px 80px -34px rgba(0,0,0,.95); }
+
+  /* --- Shine border that traces the CTA block --- */
+  .glow-ring { position: relative; }
+  .glow-ring::after {
+    content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(120deg, rgba(223,107,51,.5), transparent 40%, transparent 60%, rgba(223,107,51,.5));
+    background-size: 300% 300%; animation: ring-pan 9s linear infinite;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; padding: 1px;
+  }
+  @keyframes ring-pan { to { background-position: 300% 0; } }
+
+  /* --- Scroll progress bar --- */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 2px; width: 0%;
+    background: linear-gradient(90deg, #A94A1D, #DF6B33, #F0A379);
+    z-index: 60; transition: width .1s linear;
+  }
+
+  /* --- Gentle idle float variants for hero chips --- */
+  .float-slow { animation: float-slow 7s ease-in-out infinite; }
+  .float-slower { animation: float-slow 9s ease-in-out infinite; animation-delay: 1.2s; }
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+    }
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1 !important; transform: none !important; }
+    .marquee__track { animation: none; }
+    .tilt { transform: none !important; }
+  }
+</style>
+</head>
+
+<body class="min-h-full font-sans text-ink antialiased selection:bg-brand/30">
+
+<!-- Scroll progress -->
+<div id="progress" aria-hidden="true"></div>
+
+<!-- ============ PAGE SHELL ============ -->
+<div class="relative min-h-screen w-full overflow-x-hidden">
+
+  <!-- Ambient background glows -->
+  <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+    <div class="absolute -top-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-brand/20 blur-[120px]"></div>
+    <div class="absolute top-[60rem] right-[-8rem] h-[26rem] w-[26rem] rounded-full bg-brand-deep/20 blur-[130px]"></div>
+    <div class="absolute bottom-[-10rem] left-[-6rem] h-[24rem] w-[24rem] rounded-full bg-brand/15 blur-[130px]"></div>
+    <div class="absolute inset-0 opacity-[.035]"
+         style="background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:56px 56px;"></div>
+  </div>
+
+  <!-- ============ NAVBAR ============ -->
+  <header id="nav" class="sticky top-0 z-50 border-b border-transparent transition-colors duration-300">
+    <div class="mx-auto flex max-w-7xl items-center gap-4 px-5 py-4 sm:px-8">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white">
+          <i data-lucide="hexagon" class="h-5 w-5"></i>
+        </span>
+        <span class="font-display text-lg font-bold tracking-tight">Northwind</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="ml-6 hidden items-center gap-1 lg:flex" aria-label="Primary">
+        <a href="#services" class="rounded-lg px-3.5 py-2 text-sm text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">Services</a>
+        <a href="#numbers"  class="rounded-lg px-3.5 py-2 text-sm text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">By the numbers</a>
+        <a href="#how"      class="rounded-lg px-3.5 py-2 text-sm text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">How it works</a>
+        <a href="#about"    class="rounded-lg px-3.5 py-2 text-sm text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">About</a>
+      </nav>
+
+      <div class="ml-auto flex items-center gap-2.5">
+        <a href="login.html"
+           class="hidden h-10 items-center rounded-xl border border-line bg-field/70 px-4 text-[13px] font-medium text-ink
+                  transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 sm:flex">
+          Sign in
+        </a>
+        <a href="register.html"
+           class="flex h-10 items-center gap-1.5 rounded-xl bg-brand px-4 text-[13px] font-semibold text-white
+                  shadow-[0_10px_30px_-12px_rgba(223,107,51,.9)] transition hover:bg-brand-hover
+                  focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 active:scale-[.98]">
+          Get started <i data-lucide="arrow-right" class="h-4 w-4"></i>
+        </a>
+        <button type="button" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu"
+                class="grid h-10 w-10 place-items-center rounded-xl border border-line bg-field/70 text-ink transition hover:border-brand/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 lg:hidden">
+          <i data-lucide="menu" class="h-[18px] w-[18px]"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobileMenu" class="hidden border-t border-line bg-panel/95 backdrop-blur lg:hidden">
+      <nav class="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4 sm:px-8" aria-label="Mobile">
+        <a href="#services" class="rounded-lg px-3 py-2.5 text-sm text-muted transition hover:bg-white/5 hover:text-ink">Services</a>
+        <a href="#numbers"  class="rounded-lg px-3 py-2.5 text-sm text-muted transition hover:bg-white/5 hover:text-ink">By the numbers</a>
+        <a href="#how"      class="rounded-lg px-3 py-2.5 text-sm text-muted transition hover:bg-white/5 hover:text-ink">How it works</a>
+        <a href="#about"    class="rounded-lg px-3 py-2.5 text-sm text-muted transition hover:bg-white/5 hover:text-ink">About</a>
+        <a href="login.html" class="mt-1 rounded-lg px-3 py-2.5 text-sm font-medium text-brand transition hover:bg-white/5">Sign in</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="relative overflow-hidden">
+    <!-- Aurora: drifting brand light fields -->
+    <div class="aurora" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+
+    <div class="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:gap-16 lg:py-24">
+
+      <div>
+        <span class="reveal inline-flex items-center gap-2 rounded-full border border-line bg-field/70 px-3 py-1.5 text-xs font-medium text-brand-soft">
+          <span class="relative flex h-1.5 w-1.5">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-soft opacity-70"></span>
+            <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-soft"></span>
+          </span>
+          Trusted by 12,000+ merchants worldwide
+        </span>
+
+        <h1 class="mt-6 font-display text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.4rem]">
+          <span class="reveal block" style="--i:1">Commerce that moves</span>
+          <span class="reveal grad-text block" style="--i:2">as fast as your ideas</span>
+        </h1>
+
+        <p class="reveal mt-6 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base" style="--i:3">
+          Northwind is the e-commerce platform behind thousands of storefronts — from a single
+          maker shipping the first order to brands doing millions a month. Storefronts,
+          fulfilment, payments and growth, all under one roof.
+        </p>
+
+        <div class="reveal mt-8 flex flex-wrap items-center gap-3" style="--i:4">
+          <a href="register.html"
+             class="sheen group flex h-12 items-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-semibold text-white
+                    shadow-[0_10px_30px_-12px_rgba(223,107,51,.9)] transition
+                    hover:bg-brand-hover hover:shadow-[0_14px_36px_-12px_rgba(223,107,51,1)]
+                    focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 active:scale-[.985]">
+            Start selling free
+            <i data-lucide="arrow-right" class="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5"></i>
+          </a>
+          <a href="charts.html"
+             class="flex h-12 items-center gap-2 rounded-xl border border-line bg-field/70 px-6 text-[15px] font-medium text-ink
+                    transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 active:scale-[.985]">
+            <i data-lucide="bar-chart-3" class="h-[18px] w-[18px]"></i> View live demo
+          </a>
+        </div>
+
+        <dl class="reveal mt-10 grid grid-cols-3 gap-6 border-t border-line pt-8" style="--i:5">
+          <div>
+            <dt class="text-[13px] text-muted">Gross merchandise value</dt>
+            <dd class="count mt-1 font-display text-2xl font-bold tracking-tight" data-count="4.2" data-decimals="1" data-prefix="$" data-suffix="B">$4.2B</dd>
+          </div>
+          <div>
+            <dt class="text-[13px] text-muted">Merchants</dt>
+            <dd class="count mt-1 font-display text-2xl font-bold tracking-tight" data-count="12000" data-suffix="+">12,000+</dd>
+          </div>
+          <div>
+            <dt class="text-[13px] text-muted">Countries</dt>
+            <dd class="count mt-1 font-display text-2xl font-bold tracking-tight" data-count="48">48</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Hero visual: layered Unsplash imagery with parallax tilt -->
+      <div class="tilt-stage relative">
+        <div class="tilt" id="heroTilt">
+          <div class="img-frame aspect-[4/5] shadow-card sm:aspect-[5/5]">
+            <img
+              src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=900&q=80"
+              alt="A customer paying for an online order with a card at a checkout"
+              loading="eager" decoding="async"
+              onerror="this.closest('.img-frame').style.display='none'" />
+          </div>
+
+          <!-- Floating stat card -->
+          <div class="float-slow absolute -bottom-5 -left-5 hidden w-56 rounded-2xl border border-line bg-panel/95 p-4 shadow-card backdrop-blur sm:block">
+            <div class="flex items-center gap-3">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-brand-soft">
+                <i data-lucide="trending-up" class="h-5 w-5"></i>
+              </span>
+              <div>
+                <p class="text-[12px] text-muted">Average merchant growth</p>
+                <p class="count font-display text-lg font-bold leading-tight" data-count="38" data-prefix="+" data-suffix="% YoY">+38% YoY</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating badge -->
+          <div class="float-slower absolute -right-4 top-6 hidden rounded-2xl border border-line bg-panel/95 px-4 py-3 shadow-card backdrop-blur md:block">
+            <p class="text-[12px] text-muted">Uptime last 90 days</p>
+            <p class="font-display text-base font-bold leading-tight text-series-5">99.99%</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOGO / TRUST STRIP (marquee) ============ -->
+  <section class="border-y border-line bg-panel/40">
+    <div class="mx-auto max-w-7xl px-5 py-7 sm:px-8">
+      <p class="mb-5 text-center text-[12px] font-medium uppercase tracking-wider text-muted">Powering storefronts for</p>
+      <div class="marquee">
+        <div class="marquee__track">
+          <div class="marquee__group">
+            <span class="font-display text-base font-bold text-muted/80">MERIDIAN</span>
+            <span class="font-display text-base font-bold text-muted/80">Atlas Supply</span>
+            <span class="font-display text-base font-bold text-muted/80">Bloom &amp; Co.</span>
+            <span class="font-display text-base font-bold text-muted/80">Kestrel</span>
+            <span class="font-display text-base font-bold text-muted/80">Nordform</span>
+            <span class="font-display text-base font-bold text-muted/80">Harborline</span>
+            <span class="font-display text-base font-bold text-muted/80">Vantage Goods</span>
+          </div>
+          <!-- duplicate group makes the loop seamless -->
+          <div class="marquee__group" aria-hidden="true">
+            <span class="font-display text-base font-bold text-muted/80">MERIDIAN</span>
+            <span class="font-display text-base font-bold text-muted/80">Atlas Supply</span>
+            <span class="font-display text-base font-bold text-muted/80">Bloom &amp; Co.</span>
+            <span class="font-display text-base font-bold text-muted/80">Kestrel</span>
+            <span class="font-display text-base font-bold text-muted/80">Nordform</span>
+            <span class="font-display text-base font-bold text-muted/80">Harborline</span>
+            <span class="font-display text-base font-bold text-muted/80">Vantage Goods</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ============ -->
+  <section id="services" class="mx-auto max-w-7xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-24">
+    <div class="reveal max-w-2xl">
+      <p class="text-[13px] font-medium uppercase tracking-wider text-brand">What we do</p>
+      <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+        One platform for the whole commerce stack
+      </h2>
+      <p class="mt-4 text-[15px] leading-relaxed text-muted">
+        Every piece a growing business needs — connected, observable, and ready to scale from
+        the first order to the millionth.
+      </p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+
+      <article class="reveal group rounded-2xl border border-line bg-panel p-5 shadow-card transition hover:border-brand/40">
+        <div class="img-frame mb-5 aspect-[16/10]">
+          <img src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=800&q=80"
+               alt="A shopper browsing an online store on a laptop" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-brand/15 text-brand-soft">
+          <i data-lucide="store" class="h-5 w-5"></i>
+        </span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Storefronts</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Fast, conversion-tuned storefronts with a headless API — theme them in minutes, extend
+          them forever.
+        </p>
+      </article>
+
+      <article class="reveal group rounded-2xl border border-line bg-panel p-5 shadow-card transition hover:border-brand/40" style="transition-delay:.05s">
+        <div class="img-frame mb-5 aspect-[16/10]">
+          <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"
+               alt="Parcels moving along a warehouse conveyor" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-series-4/15 text-series-4">
+          <i data-lucide="package" class="h-5 w-5"></i>
+        </span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Fulfilment &amp; logistics</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Distributed warehouses, live inventory and same-day dispatch across 48 countries —
+          handled for you.
+        </p>
+      </article>
+
+      <article class="reveal group rounded-2xl border border-line bg-panel p-5 shadow-card transition hover:border-brand/40" style="transition-delay:.1s">
+        <div class="img-frame mb-5 aspect-[16/10]">
+          <img src="https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&w=800&q=80"
+               alt="A contactless card payment at a point of sale" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-series-5/15 text-series-5">
+          <i data-lucide="credit-card" class="h-5 w-5"></i>
+        </span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Payments</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          One integration for cards, wallets and local methods, with fraud screening and payout
+          automation built in.
+        </p>
+      </article>
+
+      <article class="reveal group rounded-2xl border border-line bg-panel p-5 shadow-card transition hover:border-brand/40">
+        <div class="img-frame mb-5 aspect-[16/10]">
+          <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80"
+               alt="A marketing team reviewing campaign analytics on a wall display" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-series-3/15 text-series-3">
+          <i data-lucide="megaphone" class="h-5 w-5"></i>
+        </span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Growth &amp; marketing</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Attribution, audience segments and campaign tools that turn traffic into repeat
+          customers.
+        </p>
+      </article>
+
+      <article class="reveal group rounded-2xl border border-line bg-panel p-5 shadow-card transition hover:border-brand/40" style="transition-delay:.05s">
+        <div class="img-frame mb-5 aspect-[16/10]">
+          <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80"
+               alt="Analytics dashboards and charts on a monitor" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-series-6/15 text-series-6">
+          <i data-lucide="activity" class="h-5 w-5"></i>
+        </span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Analytics</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Revenue, cohorts and funnel insight in real time — the same numbers our own teams
+          run on.
+        </p>
+      </article>
+
+      <article class="reveal group rounded-2xl border border-line bg-panel p-5 shadow-card transition hover:border-brand/40" style="transition-delay:.1s">
+        <div class="img-frame mb-5 aspect-[16/10]">
+          <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80"
+               alt="A support team collaborating at a shared desk" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-brand/15 text-brand-soft">
+          <i data-lucide="headset" class="h-5 w-5"></i>
+        </span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Merchant success</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Real humans on call around the clock, plus a partner network for launch, migration and
+          scaling.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ NUMBERS ============ -->
+  <section id="numbers" class="scroll-mt-24 border-y border-line bg-panel/40">
+    <div class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-24">
+      <div class="grid grid-cols-1 gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-16">
+
+        <div class="reveal">
+          <div class="img-frame aspect-[4/3] shadow-card">
+            <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=900&q=80"
+                 alt="Two colleagues reviewing growth charts together" loading="lazy" decoding="async"
+                 onerror="this.closest('.img-frame').style.display='none'" />
+          </div>
+        </div>
+
+        <div class="reveal">
+          <p class="text-[13px] font-medium uppercase tracking-wider text-brand">By the numbers</p>
+          <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+            Built to carry serious volume
+          </h2>
+          <p class="mt-4 text-[15px] leading-relaxed text-muted">
+            We process a payment every 40 milliseconds and ship from 34 warehouses. The numbers
+            below are what keeps merchants' storefronts open on their biggest days.
+          </p>
+
+          <dl class="mt-10 grid grid-cols-2 gap-x-8 gap-y-8">
+            <div class="border-t border-line pt-5">
+              <dd class="font-display text-3xl font-extrabold tracking-tight">$4.2B</dd>
+              <dt class="mt-1 text-[13px] text-muted">Annual gross merchandise value</dt>
+            </div>
+            <div class="border-t border-line pt-5">
+              <dd class="font-display text-3xl font-extrabold tracking-tight">180M</dd>
+              <dt class="mt-1 text-[13px] text-muted">Transactions processed a year</dt>
+            </div>
+            <div class="border-t border-line pt-5">
+              <dd class="font-display text-3xl font-extrabold tracking-tight">99.99%</dd>
+              <dt class="mt-1 text-[13px] text-muted">Platform uptime, trailing 90 days</dt>
+            </div>
+            <div class="border-t border-line pt-5">
+              <dd class="font-display text-3xl font-extrabold tracking-tight">34</dd>
+              <dt class="mt-1 text-[13px] text-muted">Warehouses in the network</dt>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section id="how" class="mx-auto max-w-7xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-24">
+    <div class="reveal max-w-2xl">
+      <p class="text-[13px] font-medium uppercase tracking-wider text-brand">How it works</p>
+      <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+        Live in three steps
+      </h2>
+      <p class="mt-4 text-[15px] leading-relaxed text-muted">
+        No migration project, no six-month rollout. Most merchants ship their first order the
+        same week they sign up.
+      </p>
+    </div>
+
+    <ol class="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+      <li class="reveal relative rounded-2xl border border-line bg-panel p-6 shadow-card">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-sm font-bold text-white">1</span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Connect your catalogue</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Import products from a CSV, an existing store or your ERP. We map fields and flags
+          anything that needs a human eye.
+        </p>
+      </li>
+      <li class="reveal relative rounded-2xl border border-line bg-panel p-6 shadow-card" style="transition-delay:.08s">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-sm font-bold text-white">2</span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Launch your storefront</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Pick a theme, point your domain, switch on payments. Your store is live on our global
+          edge network.
+        </p>
+      </li>
+      <li class="reveal relative rounded-2xl border border-line bg-panel p-6 shadow-card" style="transition-delay:.16s">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-sm font-bold text-white">3</span>
+        <h3 class="mt-4 font-display text-lg font-bold tracking-tight">Grow and measure</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Watch revenue, cohorts and funnels in the analytics dashboard, and act on them the
+          same afternoon.
+        </p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ ABOUT / MISSION ============ -->
+  <section id="about" class="scroll-mt-24 border-t border-line bg-panel/40">
+    <div class="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-5 py-20 sm:px-8 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-24">
+
+      <div class="reveal">
+        <p class="text-[13px] font-medium uppercase tracking-wider text-brand">Our mission</p>
+        <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Lower the barrier between a good product and a global market
+        </h2>
+        <p class="mt-5 text-[15px] leading-relaxed text-muted">
+          Northwind started in 2016 as a two-person team frustrated by how hard it was to sell
+          online outside your own country. Today we're 640 people across 11 offices, and the
+          mission hasn't moved: give any seller — anywhere — the infrastructure that used to be
+          reserved for companies a hundred times their size.
+        </p>
+
+        <ul class="mt-8 space-y-3.5 text-sm">
+          <li class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand"></i>
+            <span class="text-muted"><span class="text-ink">Sellers first.</span> Every roadmap decision is weighed by what it unlocks for the merchant.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand"></i>
+            <span class="text-muted"><span class="text-ink">Borderless by default.</span> Multi-currency, multi-language and local payment methods, not bolted on.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand"></i>
+            <span class="text-muted"><span class="text-ink">Boringly reliable.</span> Payments settle on time, every time — that's the whole product.</span>
+          </li>
+        </ul>
+
+        <a href="register.html"
+           class="mt-10 inline-flex h-12 items-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-semibold text-white
+                  shadow-[0_10px_30px_-12px_rgba(223,107,51,.9)] transition hover:bg-brand-hover
+                  focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 active:scale-[.985]">
+          Join Northwind <i data-lucide="arrow-right" class="h-[18px] w-[18px]"></i>
+        </a>
+      </div>
+
+      <div class="reveal grid grid-cols-2 gap-4">
+        <div class="img-frame aspect-square">
+          <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=700&q=80"
+               alt="Northwind team members in a working session" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <div class="img-frame aspect-square mt-8">
+          <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=700&q=80"
+               alt="A team planning session around a table" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <div class="img-frame aspect-square -mt-4">
+          <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=700&q=80"
+               alt="Colleagues talking in an open office" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <div class="img-frame aspect-square mt-4">
+          <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=700&q=80"
+               alt="A developer working at a desk" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TESTIMONIAL ============ -->
+  <section class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-24">
+    <figure class="reveal relative overflow-hidden rounded-3xl border border-line bg-panel shadow-card">
+      <div class="grid grid-cols-1 lg:grid-cols-[.85fr_1.15fr]">
+        <div class="img-frame rounded-none border-0 min-h-[16rem]">
+          <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80"
+               alt="Portrait of a Northwind merchant" loading="lazy" decoding="async"
+               onerror="this.closest('.img-frame').style.display='none'" />
+        </div>
+        <div class="flex flex-col justify-center p-8 sm:p-12">
+          <i data-lucide="quote" class="h-8 w-8 text-brand/50"></i>
+          <blockquote class="mt-5 font-display text-xl font-bold leading-snug tracking-tight sm:text-2xl">
+            “We went from selling at one weekend market to shipping to 14 countries in under a
+            year. Northwind handled the parts we didn't know we'd need.”
+          </blockquote>
+          <figcaption class="mt-6 text-sm">
+            <span class="font-semibold text-ink">Amara Diallo</span>
+            <span class="text-muted"> · Founder, Bloom &amp; Co.</span>
+          </figcaption>
+        </div>
+      </div>
+    </figure>
+  </section>
+
+  <!-- ============ CTA ============ -->
+  <section class="mx-auto max-w-7xl px-5 pb-20 sm:px-8">
+    <div class="reveal relative overflow-hidden rounded-3xl border border-brand/30 bg-gradient-to-br from-brand-deep/30 via-panel to-panel p-8 shadow-card sm:p-14">
+      <div class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand/25 blur-[90px]" aria-hidden="true"></div>
+      <div class="relative max-w-2xl">
+        <h2 class="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Ready to open your store?
+        </h2>
+        <p class="mt-4 text-[15px] leading-relaxed text-muted">
+          Create an account, connect a catalogue and take your first order this week. No setup
+          fee, no monthly minimum until you're selling.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <a href="register.html"
+             class="group flex h-12 items-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-semibold text-white
+                    shadow-[0_10px_30px_-12px_rgba(223,107,51,.9)] transition hover:bg-brand-hover
+                    focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 active:scale-[.985]">
+            Create your account
+            <i data-lucide="arrow-right" class="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5"></i>
+          </a>
+          <a href="login.html"
+             class="flex h-12 items-center rounded-xl border border-line bg-field/70 px-6 text-[15px] font-medium text-ink
+                    transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 active:scale-[.985]">
+            Sign in
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="border-t border-line">
+    <div class="mx-auto max-w-7xl px-5 py-14 sm:px-8">
+      <div class="grid grid-cols-1 gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+
+        <div>
+          <a href="index.html" class="flex items-center gap-2.5">
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white">
+              <i data-lucide="hexagon" class="h-5 w-5"></i>
+            </span>
+            <span class="font-display text-lg font-bold tracking-tight">Northwind</span>
+          </a>
+          <p class="mt-4 max-w-xs text-sm leading-relaxed text-muted">
+            The e-commerce platform behind thousands of storefronts worldwide.
+          </p>
+          <div class="mt-5 flex items-center gap-2.5">
+            <a href="#" aria-label="Northwind on X" class="grid h-9 w-9 place-items-center rounded-xl border border-line bg-field/70 text-muted transition hover:border-brand/40 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+              <i data-lucide="twitter" class="h-4 w-4"></i>
+            </a>
+            <a href="#" aria-label="Northwind on LinkedIn" class="grid h-9 w-9 place-items-center rounded-xl border border-line bg-field/70 text-muted transition hover:border-brand/40 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+              <i data-lucide="linkedin" class="h-4 w-4"></i>
+            </a>
+            <a href="#" aria-label="Northwind on GitHub" class="grid h-9 w-9 place-items-center rounded-xl border border-line bg-field/70 text-muted transition hover:border-brand/40 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+              <i data-lucide="github" class="h-4 w-4"></i>
+            </a>
+          </div>
+        </div>
+
+        <nav aria-label="Product">
+          <h3 class="text-[13px] font-semibold text-ink">Product</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="#services" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">Services</a></li>
+            <li><a href="#how" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">How it works</a></li>
+            <li><a href="charts.html" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">Analytics demo</a></li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Company">
+          <h3 class="text-[13px] font-semibold text-ink">Company</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="#about" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">About us</a></li>
+            <li><a href="#numbers" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">By the numbers</a></li>
+            <li><a href="#" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">Careers</a></li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Account">
+          <h3 class="text-[13px] font-semibold text-ink">Account</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="login.html" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">Sign in</a></li>
+            <li><a href="register.html" class="text-muted transition hover:text-brand-soft focus:outline-none focus-visible:underline">Create an account</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-[13px] text-muted">
+        <p>© 2026 Northwind Commerce Inc. All rights reserved.</p>
+        <p class="flex items-center gap-4">
+          <a href="#" class="transition hover:text-ink">Terms</a>
+          <a href="#" class="transition hover:text-ink">Privacy</a>
+          <a href="#" class="transition hover:text-ink">Cookies</a>
+        </p>
+      </div>
+      <p class="mt-4 text-[11px] leading-relaxed text-muted/60">
+        Demo page. Illustrations courtesy of Unsplash contributors.
+      </p>
+    </div>
+  </footer>
+</div>
+
+<!-- ============ SCRIPTS ============ -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  /* Navbar: solid background once the page is scrolled */
+  const nav = $('#nav');
+  const onScroll = () => {
+    const scrolled = window.scrollY > 12;
+    nav.classList.toggle('bg-base/85', scrolled);
+    nav.classList.toggle('backdrop-blur', scrolled);
+    nav.classList.toggle('border-line', scrolled);
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  /* Mobile menu */
+  const menuBtn = $('#menuBtn');
+  const mobileMenu = $('#mobileMenu');
+  menuBtn.addEventListener('click', () => {
+    const open = mobileMenu.classList.toggle('hidden') === false;
+    menuBtn.setAttribute('aria-expanded', String(open));
+    menuBtn.querySelector('i, svg')?.setAttribute('data-lucide', open ? 'x' : 'menu');
+    lucide.createIcons();
+  });
+  mobileMenu.querySelectorAll('a').forEach((a) =>
+    a.addEventListener('click', () => {
+      mobileMenu.classList.add('hidden');
+      menuBtn.setAttribute('aria-expanded', 'false');
+    })
+  );
+
+  /* Reveal on scroll */
+  const io = 'IntersectionObserver' in window
+    ? new IntersectionObserver(
+        (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }),
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.08 }
+      )
+    : null;
+  document.querySelectorAll('.reveal').forEach((el) => (io ? io.observe(el) : el.classList.add('in')));
+
+  /* Year in the footer, kept honest */
+  document.querySelectorAll('footer p').forEach((p) => {
+    if (p.textContent.includes('©')) p.textContent = p.textContent.replace('2026', String(new Date().getFullYear()));
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Analytics Dashboard — Northwind</title>
+<meta name="description" content="E-commerce analytics dashboard: revenue, business results and marketing metrics." />
+
+<!-- Fonts: Poppins (headings) + Inter (body) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          base:  '#090A14',   // page background
+          panel: '#0E1020',   // card surface
+          field: '#12142A',   // input surface
+          line:  '#22243C',   // borders
+          brand: {
+            DEFAULT: '#DF6B33',
+            hover:   '#E77E4A',
+            soft:    '#F0A379',
+            deep:    '#A94A1D',
+          },
+          ink:   '#F4F5FA',   // primary text
+          muted: '#8B90A8',   // secondary text
+          danger: {
+            DEFAULT: '#FF5D64',
+            soft:    '#FF8A90',
+            faint:   '#2A1420',
+          },
+          series: {
+            1: '#DF6B33',   // brand orange
+            2: '#D95926',   // deeper orange
+            3: '#E0B03A',   // amber
+            4: '#4FA3E3',   // blue
+            5: '#1FA97C',   // green
+            6: '#C77BA8',   // magenta
+          },
+          grid: '#1B1D33',
+        },
+        fontFamily: {
+          display: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          sans:    ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        },
+        boxShadow: {
+          glow: '0 0 0 1px rgba(223,107,51,.35), 0 12px 40px -12px rgba(223,107,51,.55)',
+          card: '0 24px 70px -30px rgba(0,0,0,.9)',
+        },
+        keyframes: {
+          rise: {
+            '0%':   { opacity: '0', transform: 'translateY(14px)' },
+            '100%': { opacity: '1', transform: 'translateY(0)' },
+          },
+        },
+        animation: {
+          rise: 'rise .55s cubic-bezier(.22,1,.36,1) both',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  html { -webkit-tap-highlight-color: transparent; }
+  body { background-color: #090A14; }
+
+  ::selection { background: rgba(223,107,51,.3); color: #fff; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #090A14; }
+  ::-webkit-scrollbar-thumb { background: #22243C; border-radius: 999px; border: 3px solid #090A14; }
+  ::-webkit-scrollbar-thumb:hover { background: #33365A; }
+
+  [data-lucide] { stroke-width: 1.9; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+
+  /* ---- Data table ---- */
+  .data-table { border-collapse: separate; border-spacing: 0; }
+  .data-table th {
+    text-align: left; font-weight: 500; font-size: 11px; letter-spacing: .05em;
+    text-transform: uppercase; color: #8B90A8;
+    padding: .75rem 1rem; border-bottom: 1px solid #22243C; white-space: nowrap;
+  }
+  .data-table td {
+    padding: .8rem 1rem; font-size: 14px; color: #F4F5FA;
+    border-bottom: 1px solid #1B1D33; white-space: nowrap;
+  }
+  .data-table tbody tr:last-child td { border-bottom: 0; }
+  .data-table tbody tr { transition: background-color .15s ease; }
+  .data-table tbody tr:hover { background-color: rgba(255,255,255,.03); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .delta { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600; }
+  .delta-up { color: #1FA97C; }
+  .delta-down { color: #FF5D64; }
+  .table-scroll { overflow-x: auto; }
+
+  /* ---- Chart card: sized to include the x-axis band ---- */
+  .chart-box { position: relative; width: 100%; }
+  .chart-box > canvas { display: block; width: 100% !important; }
+
+  /* ---- Tabs ---- */
+  .tab-btn {
+    position: relative; display: inline-flex; align-items: center; gap: .5rem;
+    padding: .6rem .95rem; font-size: 13.5px; font-weight: 500; color: #8B90A8;
+    border-radius: .6rem; transition: color .15s ease, background-color .15s ease;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: #F4F5FA; background: rgba(255,255,255,.04); }
+  .tab-btn[aria-selected="true"] { color: #F4F5FA; background: rgba(223,107,51,.12); }
+  .tab-btn[aria-selected="true"]::after {
+    content: ''; position: absolute; left: .95rem; right: .95rem; bottom: -.45rem;
+    height: 2px; border-radius: 2px; background: #DF6B33;
+  }
+  .tab-panel[hidden] { display: none; }
+
+  /* ---- Custom tooltip ---- */
+  #tip {
+    position: fixed; z-index: 60; pointer-events: none;
+    background: #12142A; border: 1px solid #22243C; border-radius: 10px;
+    padding: .55rem .7rem; box-shadow: 0 18px 40px -18px rgba(0,0,0,.95);
+    font-size: 12px; color: #F4F5FA; opacity: 0; transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease; min-width: 150px;
+  }
+  #tip.on { opacity: 1; transform: translateY(0); }
+  #tip .tip-title { font-weight: 600; margin-bottom: .35rem; color: #F4F5FA; }
+  #tip .tip-row { display: flex; align-items: center; gap: .5rem; justify-content: space-between; }
+  #tip .tip-row + .tip-row { margin-top: .2rem; }
+  #tip .tip-label { display: flex; align-items: center; gap: .45rem; color: #8B90A8; }
+  #tip .tip-key { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  #tip .tip-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* ---- Rank medal ---- */
+  .rank-badge {
+    display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px;
+    font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+</style>
+</head>
+
+<body class="min-h-full font-sans text-ink antialiased selection:bg-brand/30">
+
+<!-- ============ PAGE SHELL ============ -->
+<div class="relative flex min-h-screen w-full overflow-hidden">
+
+  <!-- Ambient background glows -->
+  <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+    <div class="absolute -top-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-brand/20 blur-[120px]"></div>
+    <div class="absolute bottom-[-12rem] right-[-6rem] h-[26rem] w-[26rem] rounded-full bg-brand-deep/25 blur-[130px]"></div>
+    <div class="absolute inset-0 opacity-[.035]"
+         style="background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:56px 56px;"></div>
+  </div>
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="relative z-10 hidden w-64 shrink-0 flex-col border-r border-line bg-panel/60 backdrop-blur lg:flex">
+    <a href="#" class="flex items-center gap-2.5 px-6 py-6">
+      <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white">
+        <i data-lucide="hexagon" class="h-5 w-5"></i>
+      </span>
+      <span class="font-display text-lg font-bold tracking-tight">Northwind</span>
+    </a>
+
+    <nav class="flex flex-1 flex-col gap-1 px-3 py-2 text-sm">
+      <p class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-muted/70">Commerce</p>
+      <button type="button" data-goto="overview" class="nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+        <i data-lucide="bar-chart-3" class="h-[18px] w-[18px]"></i> Overview
+      </button>
+      <button type="button" data-goto="employees" class="nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+        <i data-lucide="trophy" class="h-[18px] w-[18px]"></i> Top sellers
+      </button>
+      <button type="button" data-goto="regions" class="nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+        <i data-lucide="map" class="h-[18px] w-[18px]"></i> Regions
+      </button>
+
+      <p class="mt-4 px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-muted/70">Growth</p>
+      <a href="#" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+        <i data-lucide="megaphone" class="h-[18px] w-[18px]"></i> Marketing
+      </a>
+      <a href="#" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+        <i data-lucide="settings" class="h-[18px] w-[18px]"></i> Settings
+      </a>
+    </nav>
+
+    <div class="border-t border-line px-4 py-4">
+      <div class="flex items-center gap-3">
+        <span class="grid h-9 w-9 place-items-center rounded-full bg-brand/15 text-xs font-semibold text-brand-soft">AD</span>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-medium">Admin User</p>
+          <p class="truncate text-xs text-muted">admin@northwind.io</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="relative z-10 flex w-full min-w-0 flex-1 flex-col">
+
+    <!-- ---- Top bar ---- -->
+    <header class="sticky top-0 z-30 border-b border-line bg-base/80 backdrop-blur">
+      <div class="flex items-center gap-3 px-5 py-4 sm:px-8">
+        <a href="#" class="flex items-center gap-2.5 lg:hidden">
+          <span class="grid h-9 w-9 place-items-center rounded-xl bg-brand text-white">
+            <i data-lucide="hexagon" class="h-[18px] w-[18px]"></i>
+          </span>
+          <span class="font-display text-base font-bold tracking-tight">Northwind</span>
+        </a>
+
+        <div class="hidden min-w-0 lg:block">
+          <h1 id="pageTitle" class="font-display text-xl font-bold tracking-tight">E-commerce Analytics</h1>
+          <p id="pageSubtitle" class="text-[13px] text-muted">Revenue, business results &amp; marketing performance</p>
+        </div>
+
+        <div class="ml-auto flex items-center gap-2.5">
+          <button type="button" id="exportBtn"
+                  class="hidden h-10 items-center gap-2 rounded-xl border border-line bg-field/70 px-3.5 text-[13px] font-medium text-ink
+                         transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 active:scale-[.98] sm:flex">
+            <i data-lucide="download" class="h-4 w-4"></i> Export
+          </button>
+          <button type="button" id="refreshBtn" aria-label="Refresh data"
+                  class="grid h-10 w-10 place-items-center rounded-xl border border-line bg-field/70 text-ink
+                         transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 active:scale-[.98]">
+            <i data-lucide="refresh-cw" class="h-[18px] w-[18px]"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ---- Filter row: one row above everything it scopes ---- -->
+      <div class="flex flex-wrap items-center gap-2.5 px-5 pb-4 sm:px-8">
+        <div id="rangeGroup" class="flex items-center gap-1 rounded-xl border border-line bg-field/70 p-1" role="group" aria-label="Date range">
+          <button type="button" data-range="7"   class="range-btn rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted transition hover:text-ink">7D</button>
+          <button type="button" data-range="30"  class="range-btn rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted transition hover:text-ink">30D</button>
+          <button type="button" data-range="90"  class="range-btn rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted transition hover:text-ink">90D</button>
+          <button type="button" data-range="365" class="range-btn rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted transition hover:text-ink">12M</button>
+        </div>
+
+        <div class="group relative">
+          <i data-lucide="store" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted transition-colors group-focus-within:text-brand"></i>
+          <select id="channelFilter" aria-label="Sales channel"
+                  class="h-10 appearance-none rounded-xl border border-line bg-field pl-9 pr-9 text-[13px] font-medium text-ink
+                         transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15">
+            <option>All channels</option>
+            <option>Web store</option>
+            <option>Mobile app</option>
+            <option>Marketplace</option>
+          </select>
+          <i data-lucide="chevron-down" class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+        </div>
+
+        <p id="rangeNote" class="ml-auto text-[13px] text-muted">
+          Showing <span class="font-medium text-ink">Last 30 days</span> · mock data
+        </p>
+      </div>
+
+      <!-- ---- Tabs ---- -->
+      <div class="overflow-x-auto border-t border-line/60 px-5 sm:px-8">
+        <div role="tablist" aria-label="Report sections" class="flex items-center gap-1 py-2">
+          <button type="button" class="tab-btn" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-tab="overview">
+            <i data-lucide="layout-dashboard" class="h-4 w-4"></i> Overview
+          </button>
+          <button type="button" class="tab-btn" role="tab" id="tab-employees" aria-controls="panel-employees" aria-selected="false" data-tab="employees">
+            <i data-lucide="trophy" class="h-4 w-4"></i> Top 10 sellers
+          </button>
+          <button type="button" class="tab-btn" role="tab" id="tab-regions" aria-controls="panel-regions" aria-selected="false" data-tab="regions">
+            <i data-lucide="map" class="h-4 w-4"></i> Regional revenue
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex flex-col gap-5 px-5 py-6 sm:px-8">
+
+      <!-- ============================================================
+           TAB 1 — OVERVIEW
+           ============================================================ -->
+      <div class="tab-panel flex flex-col gap-5" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+
+        <!-- ================= KPI STAT TILES ================= -->
+        <section aria-label="Key metrics" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Total revenue</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" data-kpi="revenue">$1,284,930</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-brand-soft">
+                <i data-lucide="dollar-sign" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 flex items-center gap-2 text-[13px]">
+              <span class="delta delta-up inline-flex items-center gap-1"><i data-lucide="trending-up" class="h-3.5 w-3.5"></i><span data-kpi="revenueDelta">+12.4%</span></span>
+              <span class="text-muted">vs previous period</span>
+            </p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.05s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Orders</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" data-kpi="orders">18,472</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-4/15 text-series-4">
+                <i data-lucide="shopping-bag" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 flex items-center gap-2 text-[13px]">
+              <span class="delta delta-up inline-flex items-center gap-1"><i data-lucide="trending-up" class="h-3.5 w-3.5"></i><span data-kpi="ordersDelta">+8.1%</span></span>
+              <span class="text-muted">vs previous period</span>
+            </p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.1s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Avg. order value</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" data-kpi="aov">$69.56</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-5/15 text-series-5">
+                <i data-lucide="receipt" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 flex items-center gap-2 text-[13px]">
+              <span class="delta delta-up inline-flex items-center gap-1"><i data-lucide="trending-up" class="h-3.5 w-3.5"></i><span data-kpi="aovDelta">+3.9%</span></span>
+              <span class="text-muted">vs previous period</span>
+            </p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.15s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Net profit</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" data-kpi="profit">$308,383</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-3/15 text-series-3">
+                <i data-lucide="wallet" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 flex items-center gap-2 text-[13px]">
+              <span class="delta delta-down inline-flex items-center gap-1"><i data-lucide="trending-down" class="h-3.5 w-3.5"></i><span data-kpi="profitDelta">−1.2%</span></span>
+              <span class="text-muted">vs previous period</span>
+            </p>
+          </article>
+        </section>
+
+        <!-- ================= REVENUE OVER TIME ================= -->
+        <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.1s">
+          <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold tracking-tight">Revenue &amp; orders over time</h2>
+              <p class="mt-1 text-[13px] text-muted">Daily gross revenue against order volume.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+              <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-sm" style="background:#DF6B33"></span><span class="text-muted">Revenue</span></span>
+              <span class="inline-flex items-center gap-2"><span class="h-0.5 w-4 rounded-full" style="background:#4FA3E3"></span><span class="text-muted">Orders</span></span>
+            </div>
+          </div>
+
+          <div class="chart-box" style="height:320px">
+            <canvas id="revenueChart" role="img" aria-label="Line chart of daily revenue and order volume over the selected period"></canvas>
+          </div>
+
+          <details class="mt-4 border-t border-line pt-4">
+            <summary class="cursor-pointer select-none text-[13px] font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">
+              View as table
+            </summary>
+            <div class="table-scroll mt-3">
+              <table class="data-table w-full">
+                <caption class="sr-only">Daily revenue and orders</caption>
+                <thead><tr><th>Period</th><th class="num">Revenue</th><th class="num">Orders</th></tr></thead>
+                <tbody id="revenueTable"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+
+        <!-- ================= TWO-COLUMN: CATEGORY + CHANNEL ================= -->
+        <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
+
+          <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6 xl:col-span-2" style="animation-delay:.15s">
+            <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 class="font-display text-base font-bold tracking-tight">Revenue by product category</h2>
+                <p class="mt-1 text-[13px] text-muted">Gross revenue per category, selected period.</p>
+              </div>
+              <span class="inline-flex items-center gap-2 text-[13px]"><span class="h-2.5 w-2.5 rounded-sm" style="background:#DF6B33"></span><span class="text-muted">Revenue</span></span>
+            </div>
+
+            <div class="chart-box" style="height:300px">
+              <canvas id="categoryChart" role="img" aria-label="Bar chart of revenue by product category"></canvas>
+            </div>
+
+            <details class="mt-4 border-t border-line pt-4">
+              <summary class="cursor-pointer select-none text-[13px] font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">
+                View as table
+              </summary>
+              <div class="table-scroll mt-3">
+                <table class="data-table w-full">
+                  <caption class="sr-only">Revenue by product category</caption>
+                  <thead><tr><th>Category</th><th class="num">Revenue</th><th class="num">Units</th><th class="num">Share</th></tr></thead>
+                  <tbody id="categoryTable"></tbody>
+                </table>
+              </div>
+            </details>
+          </section>
+
+          <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.2s">
+            <div class="mb-5">
+              <h2 class="font-display text-base font-bold tracking-tight">Revenue by channel</h2>
+              <p class="mt-1 text-[13px] text-muted">Part-to-whole, selected period.</p>
+            </div>
+
+            <div class="chart-box" style="height:240px">
+              <canvas id="channelChart" role="img" aria-label="Doughnut chart of revenue share by sales channel"></canvas>
+            </div>
+
+            <ul id="channelLegend" class="mt-5 space-y-2.5 text-[13px]"></ul>
+          </section>
+        </div>
+
+        <!-- ================= MARKETING FUNNEL + TRAFFIC ================= -->
+        <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
+
+          <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.2s">
+            <div class="mb-5">
+              <h2 class="font-display text-base font-bold tracking-tight">Marketing funnel</h2>
+              <p class="mt-1 text-[13px] text-muted">Visitors → orders, with step conversion.</p>
+            </div>
+            <ul id="funnelList" class="space-y-4"></ul>
+          </section>
+
+          <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6 xl:col-span-2" style="animation-delay:.25s">
+            <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 class="font-display text-base font-bold tracking-tight">Sessions by traffic source</h2>
+                <p class="mt-1 text-[13px] text-muted">Where the visitors come from, selected period.</p>
+              </div>
+              <span class="inline-flex items-center gap-2 text-[13px]"><span class="h-2.5 w-2.5 rounded-sm" style="background:#4FA3E3"></span><span class="text-muted">Sessions</span></span>
+            </div>
+
+            <div class="chart-box" style="height:280px">
+              <canvas id="trafficChart" role="img" aria-label="Horizontal bar chart of sessions by traffic source"></canvas>
+            </div>
+
+            <details class="mt-4 border-t border-line pt-4">
+              <summary class="cursor-pointer select-none text-[13px] font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">
+                View as table
+              </summary>
+              <div class="table-scroll mt-3">
+                <table class="data-table w-full">
+                  <caption class="sr-only">Sessions by traffic source</caption>
+                  <thead><tr><th>Source</th><th class="num">Sessions</th><th class="num">Conv. rate</th><th class="num">Cost / acq.</th></tr></thead>
+                  <tbody id="trafficTable"></tbody>
+                </table>
+              </div>
+            </details>
+          </section>
+        </div>
+
+        <!-- ================= CAMPAIGN PERFORMANCE TABLE ================= -->
+        <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.25s">
+          <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold tracking-tight">Campaign performance</h2>
+              <p class="mt-1 text-[13px] text-muted">Spend, return and efficiency by marketing campaign.</p>
+            </div>
+            <span class="rounded-full border border-line bg-field/70 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted">Mock data</span>
+          </div>
+
+          <div class="table-scroll">
+            <table class="data-table w-full">
+              <caption class="sr-only">Marketing campaign performance</caption>
+              <thead>
+                <tr>
+                  <th>Campaign</th><th>Channel</th><th class="num">Spend</th><th class="num">Revenue</th>
+                  <th class="num">ROAS</th><th class="num">Clicks</th><th class="num">CTR</th>
+                  <th class="num">Conv.</th><th class="num">CPA</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="campaignTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TOP PRODUCTS TABLE ================= -->
+        <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.3s">
+          <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold tracking-tight">Top products</h2>
+              <p class="mt-1 text-[13px] text-muted">Best sellers by revenue, with units and category.</p>
+            </div>
+            <a href="#" class="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">
+              View all products <i data-lucide="arrow-right" class="h-4 w-4"></i>
+            </a>
+          </div>
+
+          <div class="table-scroll">
+            <table class="data-table w-full">
+              <caption class="sr-only">Top selling products</caption>
+              <thead>
+                <tr><th>#</th><th>Product</th><th>Category</th><th class="num">Units sold</th><th class="num">Revenue</th><th class="num">Growth</th></tr>
+              </thead>
+              <tbody id="productsTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 2 — TOP 10 SALES EMPLOYEES
+           ============================================================ -->
+      <div class="tab-panel flex flex-col gap-5" id="panel-employees" role="tabpanel" aria-labelledby="tab-employees" hidden>
+
+        <!-- Summary tiles -->
+        <section aria-label="Team summary" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Team revenue</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" id="teamRevenue">$0</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-brand-soft">
+                <i data-lucide="users" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">Top 10 sellers · this month</p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.05s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Top performer</p>
+                <p class="mt-2 text-[22px] font-bold leading-tight tracking-tight" id="topPerformer">—</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-3/15 text-series-3">
+                <i data-lucide="crown" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">Highest revenue this month</p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.1s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Team avg. attainment</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" id="teamAttainment">—</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-5/15 text-series-5">
+                <i data-lucide="target" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">Against monthly quota</p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.15s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Deals closed</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" id="teamDeals">0</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-4/15 text-series-4">
+                <i data-lucide="handshake" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">Across the top-10 team</p>
+          </article>
+        </section>
+
+        <!-- Ranking bar chart -->
+        <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.1s">
+          <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold tracking-tight">Top 10 sales employees — revenue this month</h2>
+              <p class="mt-1 text-[13px] text-muted">Ranked by closed revenue for the current month.</p>
+            </div>
+            <span class="inline-flex items-center gap-2 text-[13px]">
+              <span class="h-2.5 w-2.5 rounded-sm" style="background:#DF6B33"></span><span class="text-muted">Revenue</span>
+            </span>
+          </div>
+
+          <div class="chart-box" style="height:420px">
+            <canvas id="employeeChart" role="img" aria-label="Horizontal bar chart ranking the top 10 sales employees by revenue"></canvas>
+          </div>
+        </section>
+
+        <!-- Ranking table -->
+        <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.15s">
+          <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold tracking-tight">Leaderboard detail</h2>
+              <p class="mt-1 text-[13px] text-muted">Full performance breakdown for the top 10 this month.</p>
+            </div>
+            <span class="rounded-full border border-line bg-field/70 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted">Mock data · Sept 2026</span>
+          </div>
+
+          <div class="table-scroll">
+            <table class="data-table w-full">
+              <caption class="sr-only">Top 10 sales employees this month</caption>
+              <thead>
+                <tr>
+                  <th>Rank</th><th>Employee</th><th>Region</th><th class="num">Deals</th>
+                  <th class="num">Revenue</th><th class="num">Quota attain.</th><th class="num">Avg. deal</th><th class="num">vs last mo.</th>
+                </tr>
+              </thead>
+              <tbody id="employeeTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           TAB 3 — REGIONAL REVENUE
+           ============================================================ -->
+      <div class="tab-panel flex flex-col gap-5" id="panel-regions" role="tabpanel" aria-labelledby="tab-regions" hidden>
+
+        <!-- Summary tiles -->
+        <section aria-label="Regional summary" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Total revenue</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" id="regTotal">$0</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-brand-soft">
+                <i data-lucide="globe" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">All regions, selected period</p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.05s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Top region</p>
+                <p class="mt-2 text-[22px] font-bold leading-tight tracking-tight" id="regTop">—</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-3/15 text-series-3">
+                <i data-lucide="map-pin" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">Highest revenue region</p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.1s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Fastest growing</p>
+                <p class="mt-2 text-[22px] font-bold leading-tight tracking-tight" id="regGrowth">—</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-5/15 text-series-5">
+                <i data-lucide="trending-up" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">Highest YoY growth</p>
+          </article>
+
+          <article class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card" style="animation-delay:.15s">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-[13px] font-medium text-muted">Regions covered</p>
+                <p class="mt-2 text-[30px] font-bold leading-none tracking-tight" id="regCount">0</p>
+              </div>
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-series-4/15 text-series-4">
+                <i data-lucide="layers" class="h-[18px] w-[18px]"></i>
+              </span>
+            </div>
+            <p class="mt-3 text-[13px] text-muted">Active sales regions</p>
+          </article>
+        </section>
+
+        <!-- Vertical bar chart: revenue by region -->
+        <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.1s">
+          <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold tracking-tight">Revenue by geographic region</h2>
+              <p class="mt-1 text-[13px] text-muted">Gross revenue per region, selected period.</p>
+            </div>
+            <span class="inline-flex items-center gap-2 text-[13px]">
+              <span class="h-2.5 w-2.5 rounded-sm" style="background:#DF6B33"></span><span class="text-muted">Revenue</span>
+            </span>
+          </div>
+
+          <div class="chart-box" style="height:360px">
+            <canvas id="regionBarChart" role="img" aria-label="Bar chart of revenue by geographic region"></canvas>
+          </div>
+
+          <details class="mt-4 border-t border-line pt-4">
+            <summary class="cursor-pointer select-none text-[13px] font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">
+              View as table
+            </summary>
+            <div class="table-scroll mt-3">
+              <table class="data-table w-full">
+                <caption class="sr-only">Revenue by geographic region</caption>
+                <thead><tr><th>Region</th><th class="num">Revenue</th><th class="num">Orders</th><th class="num">Share</th><th class="num">YoY</th></tr></thead>
+                <tbody id="regionTable"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+
+        <!-- Horizontal bar chart: growth comparison (ordered ramp: fastest → slowest) -->
+        <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.15s">
+            <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 class="font-display text-base font-bold tracking-tight">Year-over-year growth by region</h2>
+                <p class="mt-1 text-[13px] text-muted">Revenue change against the same period last year.</p>
+              </div>
+            </div>
+
+            <div class="chart-box" style="height:340px">
+              <canvas id="regionGrowthChart" role="img" aria-label="Horizontal bar chart of year-over-year revenue growth by region"></canvas>
+            </div>
+          </section>
+
+          <!-- Region detail table -->
+          <section class="animate-rise rounded-2xl border border-line bg-panel p-5 shadow-card sm:p-6" style="animation-delay:.2s">
+            <div class="mb-5">
+              <h2 class="font-display text-base font-bold tracking-tight">Region performance detail</h2>
+              <p class="mt-1 text-[13px] text-muted">Orders, average order value and top category per region.</p>
+            </div>
+
+            <div class="table-scroll">
+              <table class="data-table w-full">
+                <caption class="sr-only">Detailed regional performance</caption>
+                <thead>
+                  <tr><th>Region</th><th class="num">Orders</th><th class="num">Avg. order</th><th>Top category</th><th class="num">YoY</th></tr>
+                </thead>
+                <tbody id="regionDetailTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ================= FOOTER LINKS ================= -->
+      <footer class="flex flex-wrap items-center justify-between gap-3 pb-4 text-[13px] text-muted">
+        <p>Northwind Analytics · demo dashboard with mock data</p>
+        <p class="flex items-center gap-4">
+          <a href="login.html" class="font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">Back to sign in</a>
+          <a href="register.html" class="font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">Create an account</a>
+        </p>
+      </footer>
+    </div>
+  </main>
+</div>
+
+<!-- Custom tooltip -->
+<div id="tip" role="tooltip" aria-hidden="true"></div>
+
+<!-- Toast -->
+<div id="toast" role="status" aria-live="polite"
+     class="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 translate-y-4 scale-95 rounded-xl border border-line
+            bg-panel/95 px-4 py-3 text-sm text-ink opacity-0 shadow-card backdrop-blur transition-all duration-300">
+  <span id="toastMsg">Done</span>
+</div>
+
+<!-- Chart.js + Lucide -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+<script>
+lucide.createIcons();
+
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+/* ============================================================
+   1. HELPERS
+   ============================================================ */
+const money  = (n) => '$' + Math.round(n).toLocaleString('en-US');
+const money2 = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num    = (n) => Math.round(n).toLocaleString('en-US');
+const pct    = (n) => n.toFixed(1) + '%';
+const kfmt   = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
+const signed = (n) => (n >= 0 ? '+' : '−') + Math.abs(n).toFixed(1) + '%';
+
+/* Fixed series palette — color follows the entity, never its rank */
+const C = {
+  revenue: '#DF6B33',
+  orders:  '#4FA3E3',
+  spend:   '#E0B03A',
+  traffic: '#4FA3E3',
+  conv:    '#1FA97C',
+  email:   '#C77BA8',
+  region:  '#DF6B33',
+};
+
+/* ============================================================
+   2. MOCK DATA
+   ============================================================ */
+
+/* --- Revenue & orders time series (90 days; sliced per range) --- */
+const DAYS = 90;
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const TODAY = new Date(2026, 8, 20); // 2026-09-20
+
+const series = (() => {
+  const out = [];
+  const base = 38000;
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date(TODAY);
+    d.setDate(d.getDate() - i);
+
+    const dow = d.getDay();
+    const weekend = (dow === 0 || dow === 6) ? 0.82 : 1;
+    const trend = 1 + (DAYS - i) / DAYS * 0.28;
+    const wobble = 1 + Math.sin(i * 0.9) * 0.06 + Math.cos(i * 0.31) * 0.045;
+    const spike = (i === 12 || i === 45) ? 1.35 : 1;
+
+    const revenue = Math.round(base * weekend * trend * wobble * spike);
+    const orders  = Math.round(revenue / (66 + Math.sin(i * 0.5) * 4));
+    out.push({ date: d, label: `${MONTHS[d.getMonth()]} ${d.getDate()}`, revenue, orders });
+  }
+  return out;
+})();
+
+function aggregate(slice) {
+  const revenue = slice.reduce((s, d) => s + d.revenue, 0);
+  const orders  = slice.reduce((s, d) => s + d.orders, 0);
+  return { revenue, orders, aov: orders ? revenue / orders : 0, profit: revenue * 0.24 };
+}
+
+/* --- Category revenue --- */
+const CATEGORIES = [
+  { name: 'Electronics',   revenue: 402180, units: 6840 },
+  { name: 'Home & Living', revenue: 268400, units: 9120 },
+  { name: 'Fashion',       revenue: 231750, units: 14380 },
+  { name: 'Sporting',      revenue: 168920, units: 5240 },
+  { name: 'Beauty',        revenue: 124680, units: 8060 },
+  { name: 'Books & Media', revenue:  88900, units: 4310 },
+];
+
+/* --- Channel split --- */
+const CHANNELS = [
+  { name: 'Web store',   value: 578200, color: C.traffic },
+  { name: 'Mobile app',  value: 402310, color: C.revenue },
+  { name: 'Marketplace', value: 214880, color: C.conv },
+  { name: 'Retail POS',  value:  89540, color: C.spend },
+];
+
+/* --- Marketing funnel (ordered stages) --- */
+const FUNNEL = [
+  { name: 'Sessions',      value: 412800 },
+  { name: 'Product views', value: 286400 },
+  { name: 'Add to cart',   value:  94820 },
+  { name: 'Checkout',      value:  41260 },
+  { name: 'Purchases',     value:  18472 },
+];
+
+/* --- Traffic sources --- */
+const TRAFFIC = [
+  { source: 'Organic search', sessions: 148320, conv: 4.6, cpa: 0 },
+  { source: 'Paid search',    sessions:  96480, conv: 5.2, cpa: 18.4 },
+  { source: 'Social',         sessions:  68740, conv: 3.1, cpa: 24.9 },
+  { source: 'Direct',         sessions:  52310, conv: 6.8, cpa: 0 },
+  { source: 'Email',          sessions:  34120, conv: 7.4, cpa: 6.2 },
+  { source: 'Referral',       sessions:  12830, conv: 3.9, cpa: 11.5 },
+];
+
+/* --- Campaigns --- */
+const CAMPAIGNS = [
+  { name: 'Summer Flash Sale',  channel: 'Paid search', spend: 24800, revenue: 186400, clicks: 41200, impr: 1860000, conv: 3120, status: 'good' },
+  { name: 'Retargeting — Cart', channel: 'Social',      spend: 15200, revenue:  98400, clicks: 28600, impr: 1140000, conv: 1840, status: 'good' },
+  { name: 'Newsletter Weekly',  channel: 'Email',       spend:  4200, revenue:  74800, clicks: 18400, impr:  412000, conv: 1320, status: 'good' },
+  { name: 'Brand Awareness Q3', channel: 'Display',     spend: 32000, revenue:  61200, clicks: 22100, impr: 4820000, conv:  690, status: 'warning' },
+  { name: 'Influencer Takeover',channel: 'Social',      spend: 18500, revenue:  42600, clicks: 15800, impr:  980000, conv:  410, status: 'warning' },
+  { name: 'Clearance Banner',   channel: 'Display',     spend: 11800, revenue:  14900, clicks:  9400, impr: 1240000, conv:  180, status: 'critical' },
+];
+
+/* --- Top products --- */
+const PRODUCTS = [
+  { name: 'Aurora Wireless Headphones', category: 'Electronics',  units: 3240, revenue: 421200, growth:  18.4 },
+  { name: 'Lumen Smart Desk Lamp',      category: 'Home & Living', units: 2890, revenue: 173400, growth:  12.1 },
+  { name: 'Trailhead Running Shoes',    category: 'Sporting',      units: 2140, revenue: 149800, growth:   9.6 },
+  { name: 'Nimbus Air Purifier',        category: 'Home & Living', units: 1680, revenue: 134400, growth:  -4.2 },
+  { name: 'Vega Cotton Hoodie',         category: 'Fashion',       units: 3960, revenue: 118800, growth:  22.7 },
+  { name: 'Orbit Mechanical Keyboard',  category: 'Electronics',   units: 1120, revenue:  89600, growth:   6.3 },
+  { name: 'Glow Vitamin C Serum',       category: 'Beauty',        units: 4820, revenue:  81880, growth:  31.5 },
+  { name: 'Pulse Fitness Tracker',      category: 'Electronics',   units: 1560, revenue:  62400, growth: -11.8 },
+];
+
+/* --- TAB 2: Top 10 sales employees this month (Sept 2026) --- */
+const EMPLOYEES = [
+  { name: 'Sofia Almeida',   region: 'Western Europe', deals: 84, revenue: 184600, quota: 160000, delta:  24.1 },
+  { name: 'Daniel Okafor',   region: 'North America',  deals: 76, revenue: 172300, quota: 165000, delta:  18.7 },
+  { name: 'Mai Thi Nguyen',  region: 'Southeast Asia', deals: 92, revenue: 168900, quota: 140000, delta:  31.5 },
+  { name: 'Lucas Fernández', region: 'South America',  deals: 68, revenue: 151200, quota: 145000, delta:  12.3 },
+  { name: 'Emma Lindqvist',  region: 'Nordics',        deals: 71, revenue: 148700, quota: 130000, delta:  21.9 },
+  { name: 'Hiroshi Tanaka',  region: 'East Asia',      deals: 63, revenue: 142400, quota: 150000, delta:  -3.4 },
+  { name: 'Aisha Rahman',    region: 'Middle East',    deals: 58, revenue: 136800, quota: 120000, delta:  16.2 },
+  { name: 'Marco Rossi',     region: 'Southern Europe',deals: 66, revenue: 131500, quota: 135000, delta:   7.8 },
+  { name: 'Chloe Bennett',   region: 'UK & Ireland',   deals: 61, revenue: 127900, quota: 125000, delta:  14.6 },
+  { name: 'Kofi Mensah',     region: 'West Africa',    deals: 54, revenue: 118400, quota: 110000, delta:  27.3 },
+];
+
+/* --- TAB 3: Revenue by geographic region --- */
+const REGIONS = [
+  { region: 'North America',   revenue: 386400, orders: 5240, yoy: 14.2, top: 'Electronics' },
+  { region: 'Western Europe',  revenue: 298700, orders: 4180, yoy: 11.8, top: 'Home & Living' },
+  { region: 'East Asia',       revenue: 241200, orders: 3620, yoy: 22.6, top: 'Electronics' },
+  { region: 'Southeast Asia',  revenue: 168900, orders: 2980, yoy: 31.5, top: 'Fashion' },
+  { region: 'Southern Europe', revenue: 124600, orders: 1940, yoy:  6.4, top: 'Fashion' },
+  { region: 'Middle East',     revenue:  98600, orders: 1420, yoy: 18.9, top: 'Beauty' },
+  { region: 'South America',   revenue:  84200, orders: 1580, yoy:  9.1, top: 'Sporting' },
+  { region: 'Nordics',         revenue:  62100, orders:  920, yoy:  4.7, top: 'Home & Living' },
+  { region: 'West Africa',     revenue:  41800, orders:  760, yoy: 27.3, top: 'Beauty' },
+  { region: 'Oceania',         revenue:  36400, orders:  640, yoy: 12.0, top: 'Sporting' },
+];
+
+/* ============================================================
+   3. CHART.JS GLOBAL DEFAULTS
+   ============================================================ */
+function prefersReduced() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+Chart.defaults.font.family = "'Inter', ui-sans-serif, system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#8B90A8';
+Chart.defaults.animation.duration = prefersReduced() ? 0 : 650;
+Chart.defaults.animation.easing = 'easeOutQuart';
+Chart.defaults.plugins.legend.display = false; // legends are authored in HTML
+
+const GRID   = { color: '#1B1D33', drawTicks: false };
+const BORDER = '#22243C';
+const SURFACE = '#0E1020';
+
+/* Shared external tooltip so the card styling stays consistent */
+let TIP = null;
+function externalTooltip(ctx) {
+  TIP = TIP || $('#tip');
+  const { chart, tooltip } = ctx;
+  if (tooltip.opacity === 0) { TIP.classList.remove('on'); TIP.setAttribute('aria-hidden', 'true'); return; }
+
+  const title = tooltip.title?.[0] ?? '';
+  let html = title ? `<div class="tip-title">${title}</div>` : '';
+  (tooltip.dataPoints || []).forEach((dp) => {
+    const color = dp.dataset.borderColor || dp.dataset.backgroundColor;
+    html += `<div class="tip-row">
+      <span class="tip-label"><span class="tip-key" style="background:${color}"></span>${dp.dataset.label}</span>
+      <span class="tip-val">${dp.formattedValue}</span>
+    </div>`;
+  });
+  TIP.innerHTML = html;
+  TIP.classList.add('on');
+  TIP.setAttribute('aria-hidden', 'false');
+
+  const r = chart.canvas.getBoundingClientRect();
+  const w = TIP.offsetWidth, h = TIP.offsetHeight;
+  let x = r.left + tooltip.caretX + 14;
+  let y = r.top + tooltip.caretY - h - 12;
+  if (x + w > window.innerWidth - 12) x = r.left + tooltip.caretX - w - 14;
+  if (y < 12) y = r.top + tooltip.caretY + 16;
+  TIP.style.left = x + 'px';
+  TIP.style.top = y + 'px';
+}
+document.addEventListener('scroll', () => { if (TIP) TIP.classList.remove('on'); }, { passive: true });
+
+/* Rounded data-end anchored to the baseline (bar spec) */
+function roundEnd(v, size = 4) {
+  if (v == null) return 0;
+  const s = Math.sign(v), a = Math.abs(v), r = Math.min(size, a);
+  return s * (a - r) + ' ' + a;
+}
+
+/* ============================================================
+   4. CHARTS — OVERVIEW
+   ============================================================ */
+const revenueChart = new Chart($('#revenueChart'), {
+  type: 'line',
+  data: {
+    labels: series.slice(-30).map((d) => d.label),
+    datasets: [
+      {
+        label: 'Revenue',
+        data: series.slice(-30).map((d) => d.revenue),
+        borderColor: C.revenue,
+        backgroundColor: 'rgba(223,107,51,.12)',
+        borderWidth: 2, fill: true, tension: 0.35,
+        pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+        pointHoverBorderColor: SURFACE, pointHoverBackgroundColor: C.revenue,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Orders',
+        data: series.slice(-30).map((d) => d.orders),
+        borderColor: C.orders,
+        borderWidth: 2, fill: false, tension: 0.35,
+        pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+        pointHoverBorderColor: SURFACE, pointHoverBackgroundColor: C.orders,
+        yAxisID: 'y1',
+      },
+    ],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    layout: { padding: { top: 8 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        enabled: false, external: externalTooltip,
+        callbacks: { label: (c) => `${c.dataset.label}: ${c.dataset.label === 'Revenue' ? money(c.parsed.y) : num(c.parsed.y)}` },
+      },
+    },
+    scales: {
+      x: { grid: { display: false }, border: { color: BORDER }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7, padding: 6 } },
+      y: {
+        position: 'left', beginAtZero: true, grid: GRID, border: { display: false },
+        ticks: { padding: 8, callback: (v) => '$' + kfmt(v) },
+        title: { display: true, text: 'Revenue', color: '#8B90A8', font: { size: 11 } },
+      },
+      y1: {
+        position: 'right', beginAtZero: true,
+        grid: { drawOnChartArea: false }, border: { display: false },
+        ticks: { padding: 8, callback: (v) => kfmt(v) },
+        title: { display: true, text: 'Orders', color: '#8B90A8', font: { size: 11 } },
+      },
+    },
+  },
+});
+
+const categoryChart = new Chart($('#categoryChart'), {
+  type: 'bar',
+  data: {
+    labels: CATEGORIES.map((c) => c.name),
+    datasets: [{
+      label: 'Revenue',
+      data: CATEGORIES.map((c) => c.revenue),
+      backgroundColor: C.revenue, hoverBackgroundColor: '#E77E4A',
+      borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+      borderSkipped: 'bottom',
+      barPercentage: 0.62, categoryPercentage: 0.8, maxBarThickness: 46,
+    }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    layout: { padding: { top: 8 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false, external: externalTooltip, callbacks: { label: (c) => `Revenue: ${money(c.parsed.y)}` } },
+    },
+    scales: {
+      x: { grid: { display: false }, border: { color: BORDER }, ticks: { padding: 6, maxRotation: 30, autoSkip: false } },
+      y: { beginAtZero: true, grid: GRID, border: { display: false }, ticks: { padding: 8, callback: (v) => '$' + kfmt(v) } },
+    },
+  },
+});
+
+const channelChart = new Chart($('#channelChart'), {
+  type: 'doughnut',
+  data: {
+    labels: CHANNELS.map((c) => c.name),
+    datasets: [{
+      data: CHANNELS.map((c) => c.value),
+      backgroundColor: CHANNELS.map((c) => c.color),
+      borderColor: SURFACE, borderWidth: 2, hoverOffset: 4,
+    }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '62%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false, external: externalTooltip, callbacks: { label: (c) => `${c.label}: ${money(c.parsed)}` } },
+    },
+  },
+});
+
+const trafficChart = new Chart($('#trafficChart'), {
+  type: 'bar',
+  data: {
+    labels: TRAFFIC.map((t) => t.source),
+    datasets: [{
+      label: 'Sessions',
+      data: TRAFFIC.map((t) => t.sessions),
+      backgroundColor: C.traffic, hoverBackgroundColor: '#6FB6EE',
+      borderRadius: { topLeft: 0, topRight: 4, bottomLeft: 0, bottomRight: 4 },
+      borderSkipped: 'left',
+      barPercentage: 0.66, categoryPercentage: 0.85, maxBarThickness: 26,
+    }],
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    layout: { padding: { right: 12 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false, external: externalTooltip, callbacks: { label: (c) => `Sessions: ${num(c.parsed.x)}` } },
+    },
+    scales: {
+      x: { beginAtZero: true, grid: GRID, border: { display: false }, ticks: { padding: 6, callback: (v) => kfmt(v) } },
+      y: { grid: { display: false }, border: { color: BORDER }, ticks: { padding: 6 } },
+    },
+  },
+});
+
+/* ============================================================
+   5. TABLES & LISTS
+   ============================================================ */
+function deltaCell(v) {
+  const up = v >= 0;
+  return `<span class="delta ${up ? 'delta-up' : 'delta-down'}">${signed(v)}</span>`;
+}
+
+function renderRevenueTable(range) {
+  const slice = series.slice(-range);
+  const step  = Math.max(1, Math.ceil(slice.length / 12));
+  $('#revenueTable').innerHTML = slice.filter((_, i) => i % step === 0).map((d) => `
+    <tr>
+      <td class="text-muted">${d.label}</td>
+      <td class="num">${money(d.revenue)}</td>
+      <td class="num">${num(d.orders)}</td>
+    </tr>`).join('');
+}
+
+function renderCategoryTable() {
+  const total = CATEGORIES.reduce((s, c) => s + c.revenue, 0);
+  $('#categoryTable').innerHTML = CATEGORIES.map((c) => `
+    <tr>
+      <td>${c.name}</td>
+      <td class="num">${money(c.revenue)}</td>
+      <td class="num">${num(c.units)}</td>
+      <td class="num">${pct(c.revenue / total * 100)}</td>
+    </tr>`).join('');
+}
+
+function renderChannelLegend() {
+  const total = CHANNELS.reduce((s, c) => s + c.value, 0);
+  $('#channelLegend').innerHTML = CHANNELS.map((c) => `
+    <li class="flex items-center justify-between gap-3">
+      <span class="flex items-center gap-2.5">
+        <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background:${c.color}"></span>
+        <span class="text-muted">${c.name}</span>
+      </span>
+      <span class="flex items-baseline gap-3">
+        <span class="font-semibold" style="font-variant-numeric:tabular-nums">${money(c.value)}</span>
+        <span class="w-12 text-right text-muted" style="font-variant-numeric:tabular-nums">${pct(c.value / total * 100)}</span>
+      </span>
+    </li>`).join('');
+}
+
+/* Funnel: ordinal ramp (single hue, light → dark as stages deepen) */
+const FUNNEL_RAMP = ['#86B6EF', '#5598E7', '#3987E5', '#256ABF', '#184F95'];
+function renderFunnel() {
+  const top = FUNNEL[0].value;
+  $('#funnelList').innerHTML = FUNNEL.map((s, i) => {
+    const share = s.value / top * 100;
+    const prev  = i > 0 ? FUNNEL[i - 1].value : null;
+    const step  = prev ? (s.value / prev * 100) : null;
+    return `
+      <li>
+        <div class="mb-2 flex items-baseline justify-between gap-3 text-[13px]">
+          <span class="font-medium text-ink">${s.name}</span>
+          <span class="flex items-baseline gap-2.5">
+            <span class="text-muted" style="font-variant-numeric:tabular-nums">${num(s.value)}</span>
+            <span class="w-14 text-right font-semibold" style="font-variant-numeric:tabular-nums">${pct(share)}</span>
+          </span>
+        </div>
+        <div class="h-2.5 w-full overflow-hidden rounded-full bg-field">
+          <div class="h-full rounded-full transition-all duration-700" style="width:${share.toFixed(1)}%;background:${FUNNEL_RAMP[i]}"></div>
+        </div>
+        ${step !== null
+          ? `<p class="mt-1.5 text-[12px] text-muted">Step conversion <span class="font-medium text-ink" style="font-variant-numeric:tabular-nums">${pct(step)}</span></p>`
+          : `<p class="mt-1.5 text-[12px] text-muted">Entry point for the funnel</p>`}
+      </li>`;
+  }).join('');
+}
+
+function renderTrafficTable() {
+  $('#trafficTable').innerHTML = TRAFFIC.map((t) => `
+    <tr>
+      <td>${t.source}</td>
+      <td class="num">${num(t.sessions)}</td>
+      <td class="num">${pct(t.conv)}</td>
+      <td class="num">${t.cpa ? money2(t.cpa) : '—'}</td>
+    </tr>`).join('');
+}
+
+/* Campaign status uses icon + label, never color alone */
+const STATUS = {
+  good:     { label: 'Performing',   dot: '#1FA97C', icon: 'check-circle-2' },
+  warning:  { label: 'Watch',        dot: '#E0B03A', icon: 'alert-triangle' },
+  critical: { label: 'Under review', dot: '#FF5D64', icon: 'x-circle' },
+};
+function renderCampaignTable() {
+  $('#campaignTable').innerHTML = CAMPAIGNS.map((c) => {
+    const roas = c.revenue / c.spend;
+    const ctr  = c.clicks / c.impr * 100;
+    const cpa  = c.spend / c.conv;
+    const s    = STATUS[c.status];
+    return `
+      <tr>
+        <td class="font-medium">${c.name}</td>
+        <td class="text-muted">${c.channel}</td>
+        <td class="num">${money(c.spend)}</td>
+        <td class="num">${money(c.revenue)}</td>
+        <td class="num font-semibold">${roas.toFixed(2)}×</td>
+        <td class="num">${num(c.clicks)}</td>
+        <td class="num">${pct(ctr)}</td>
+        <td class="num">${num(c.conv)}</td>
+        <td class="num">${money2(cpa)}</td>
+        <td>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-field/70 px-2.5 py-1 text-[12px] font-medium">
+            <i data-lucide="${s.icon}" class="h-3.5 w-3.5" style="color:${s.dot}"></i>
+            <span>${s.label}</span>
+          </span>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function renderProductsTable() {
+  $('#productsTable').innerHTML = PRODUCTS.map((p, i) => `
+    <tr>
+      <td class="text-muted" style="font-variant-numeric:tabular-nums">${i + 1}</td>
+      <td class="font-medium">${p.name}</td>
+      <td class="text-muted">${p.category}</td>
+      <td class="num">${num(p.units)}</td>
+      <td class="num font-semibold">${money(p.revenue)}</td>
+      <td class="num">${deltaCell(p.growth)}</td>
+    </tr>`).join('');
+}
+
+/* ============================================================
+   6. TAB 2 — TOP EMPLOYEES
+   ============================================================ */
+const employeeChart = new Chart($('#employeeChart'), {
+  type: 'bar',
+  data: {
+    labels: EMPLOYEES.map((e) => e.name),
+    datasets: [{
+      label: 'Revenue',
+      data: EMPLOYEES.map((e) => e.revenue),
+      backgroundColor: EMPLOYEES.map((_, i) => i === 0 ? '#DF6B33' : '#E0B03A'),
+      hoverBackgroundColor: '#E77E4A',
+      borderRadius: { topLeft: 0, topRight: 4, bottomLeft: 0, bottomRight: 4 },
+      borderSkipped: 'left',
+      barPercentage: 0.7, categoryPercentage: 0.86, maxBarThickness: 24,
+    }],
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    layout: { padding: { right: 16 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        enabled: false, external: externalTooltip,
+        callbacks: { label: (c) => `Revenue: ${money(c.parsed.x)}` },
+      },
+    },
+    scales: {
+      x: { beginAtZero: true, grid: GRID, border: { display: false }, ticks: { padding: 6, callback: (v) => '$' + kfmt(v) } },
+      y: { grid: { display: false }, border: { color: BORDER }, ticks: { padding: 6 } },
+    },
+  },
+});
+
+const RANK_STYLE = [
+  { bg: 'rgba(223,107,51,.18)', fg: '#F0A379' },  // 1
+  { bg: 'rgba(224,176,58,.18)', fg: '#E0B03A' },  // 2
+  { bg: 'rgba(200,123,168,.18)',fg: '#C77BA8' },  // 3
+];
+function renderEmployeeSummary() {
+  const total      = EMPLOYEES.reduce((s, e) => s + e.revenue, 0);
+  const deals      = EMPLOYEES.reduce((s, e) => s + e.deals, 0);
+  const avgAttain  = EMPLOYEES.reduce((s, e) => s + e.revenue / e.quota * 100, 0) / EMPLOYEES.length;
+  const top        = EMPLOYEES[0];
+
+  $('#teamRevenue').textContent    = money(total);
+  $('#teamDeals').textContent      = num(deals);
+  $('#teamAttainment').textContent = pct(avgAttain);
+  $('#topPerformer').textContent   = top.name;
+}
+
+function renderEmployeeTable() {
+  $('#employeeTable').innerHTML = EMPLOYEES.map((e, i) => {
+    const attain  = e.revenue / e.quota * 100;
+    const avgDeal = e.revenue / e.deals;
+    const style   = RANK_STYLE[i] || { bg: 'rgba(255,255,255,.05)', fg: '#8B90A8' };
+    return `
+      <tr>
+        <td>
+          <span class="rank-badge" style="background:${style.bg};color:${style.fg}">${i + 1}</span>
+        </td>
+        <td class="font-medium">${e.name}</td>
+        <td class="text-muted">${e.region}</td>
+        <td class="num">${num(e.deals)}</td>
+        <td class="num font-semibold">${money(e.revenue)}</td>
+        <td class="num">${pct(attain)}</td>
+        <td class="num">${money(avgDeal)}</td>
+        <td class="num">${deltaCell(e.delta)}</td>
+      </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   7. TAB 3 — REGIONAL REVENUE
+   ============================================================ */
+const regionBarChart = new Chart($('#regionBarChart'), {
+  type: 'bar',
+  data: {
+    labels: REGIONS.map((r) => r.region),
+    datasets: [{
+      label: 'Revenue',
+      data: REGIONS.map((r) => r.revenue),
+      backgroundColor: C.region, hoverBackgroundColor: '#E77E4A',
+      borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+      borderSkipped: 'bottom',
+      barPercentage: 0.6, categoryPercentage: 0.82, maxBarThickness: 44,
+    }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    layout: { padding: { top: 8 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false, external: externalTooltip, callbacks: { label: (c) => `Revenue: ${money(c.parsed.y)}` } },
+    },
+    scales: {
+      x: { grid: { display: false }, border: { color: BORDER }, ticks: { padding: 6, maxRotation: 40, minRotation: 30, autoSkip: false } },
+      y: { beginAtZero: true, grid: GRID, border: { display: false }, ticks: { padding: 8, callback: (v) => '$' + kfmt(v) } },
+    },
+  },
+});
+
+/* Growth chart: ordered by YoY, single-hue ordinal ramp (light → dark = slow → fast) */
+const GROWTH_ORDER = [...REGIONS].sort((a, b) => a.yoy - b.yoy);
+const GROWTH_RAMP  = ['#184F95', '#1F61A8', '#256ABF', '#2A78D6', '#3987E5', '#5598E7', '#6DA7EC', '#86B6EF', '#9EC5F4', '#B7D3F6'];
+const regionGrowthChart = new Chart($('#regionGrowthChart'), {
+  type: 'bar',
+  data: {
+    labels: GROWTH_ORDER.map((r) => r.region),
+    datasets: [{
+      label: 'YoY growth',
+      data: GROWTH_ORDER.map((r) => r.yoy),
+      backgroundColor: GROWTH_ORDER.map((_, i) => GROWTH_RAMP[i]),
+      borderRadius: { topLeft: 0, topRight: 4, bottomLeft: 0, bottomRight: 4 },
+      borderSkipped: 'left',
+      barPercentage: 0.72, categoryPercentage: 0.88, maxBarThickness: 22,
+    }],
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    layout: { padding: { right: 16 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        enabled: false, external: externalTooltip,
+        callbacks: { label: (c) => `YoY: ${signed(c.parsed.x)}` },
+      },
+    },
+    scales: {
+      x: { beginAtZero: true, grid: GRID, border: { display: false }, ticks: { padding: 6, callback: (v) => v + '%' } },
+      y: { grid: { display: false }, border: { color: BORDER }, ticks: { padding: 6 } },
+    },
+  },
+});
+
+function renderRegionSummary() {
+  const total   = REGIONS.reduce((s, r) => s + r.revenue, 0);
+  const top     = [...REGIONS].sort((a, b) => b.revenue - a.revenue)[0];
+  const fastest = [...REGIONS].sort((a, b) => b.yoy - a.yoy)[0];
+
+  $('#regTotal').textContent  = money(total);
+  $('#regTop').textContent    = top.region;
+  $('#regGrowth').textContent = fastest.region;
+  $('#regCount').textContent  = REGIONS.length;
+}
+
+function renderRegionTable() {
+  const total = REGIONS.reduce((s, r) => s + r.revenue, 0);
+  $('#regionTable').innerHTML = REGIONS.map((r) => `
+    <tr>
+      <td>${r.region}</td>
+      <td class="num">${money(r.revenue)}</td>
+      <td class="num">${num(r.orders)}</td>
+      <td class="num">${pct(r.revenue / total * 100)}</td>
+      <td class="num">${deltaCell(r.yoy)}</td>
+    </tr>`).join('');
+}
+
+function renderRegionDetailTable() {
+  $('#regionDetailTable').innerHTML = REGIONS.map((r) => `
+    <tr>
+      <td class="font-medium">${r.region}</td>
+      <td class="num">${num(r.orders)}</td>
+      <td class="num">${money(r.revenue / r.orders)}</td>
+      <td class="text-muted">${r.top}</td>
+      <td class="num">${deltaCell(r.yoy)}</td>
+    </tr>`).join('');
+}
+
+/* ============================================================
+   8. KPI TILES + TIME RANGE
+   ============================================================ */
+const RANGE_LABEL = { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days', 365: 'Last 12 months' };
+const PREV_DELTA  = {
+  7:   { revenue: 6.2,  orders: 4.1, aov: 2.0,  profit: 5.4 },
+  30:  { revenue: 12.4, orders: 8.1, aov: 3.9,  profit: -1.2 },
+  90:  { revenue: 18.7, orders: 15.3, aov: 2.8, profit: 9.1 },
+  365: { revenue: 24.5, orders: 19.8, aov: 4.1, profit: 13.6 },
+};
+const KPIS = {};
+[7, 30, 90].forEach((r) => { KPIS[r] = aggregate(series.slice(-r)); });
+KPIS[365] = (() => {
+  const k = aggregate(series.slice(-90));
+  const f = 4.02;
+  return { revenue: Math.round(k.revenue * f), orders: Math.round(k.orders * f), aov: k.aov * 1.03, profit: Math.round(k.revenue * f * 0.24) };
+})();
+
+function setKpis(range) {
+  const k = KPIS[range], d = PREV_DELTA[range];
+  const set = (key, text) => { const el = $(`[data-kpi="${key}"]`); if (el) el.textContent = text; };
+
+  set('revenue', money(k.revenue));
+  set('orders',  num(k.orders));
+  set('aov',     money2(k.aov));
+  set('profit',  money(k.profit));
+
+  const paint = (key, value) => {
+    const wrap = $(`[data-kpi="${key}Delta"]`)?.closest('.delta');
+    if (!wrap) return;
+    const up = value >= 0;
+    wrap.classList.toggle('delta-up', up);
+    wrap.classList.toggle('delta-down', !up);
+    const icon = wrap.querySelector('i, svg');
+    if (icon) {
+      const next = document.createElement('i');
+      next.setAttribute('data-lucide', up ? 'trending-up' : 'trending-down');
+      next.className = 'h-3.5 w-3.5';
+      icon.replaceWith(next);
+    }
+    $(`[data-kpi="${key}Delta"]`).textContent = signed(value);
+  };
+  paint('revenue', d.revenue);
+  paint('orders',  d.orders);
+  paint('aov',     d.aov);
+  paint('profit',  d.profit);
+
+  lucide.createIcons();
+}
+
+function setRange(range) {
+  const r = Number(range);
+  const slice = series.slice(-r);
+
+  revenueChart.data.labels = slice.map((d) => d.label);
+  revenueChart.data.datasets[0].data = slice.map((d) => d.revenue);
+  revenueChart.data.datasets[1].data = slice.map((d) => d.orders);
+  revenueChart.update();
+
+  setKpis(r);
+  renderRevenueTable(r);
+
+  $$('.range-btn').forEach((b) => {
+    const active = Number(b.dataset.range) === r;
+    b.classList.toggle('bg-brand', active);
+    b.classList.toggle('text-white', active);
+    b.classList.toggle('shadow-[0_6px_18px_-8px_rgba(223,107,51,.9)]', active);
+    b.classList.toggle('text-muted', !active);
+    b.setAttribute('aria-pressed', String(active));
+  });
+
+  $('#rangeNote').innerHTML =
+    `Showing <span class="font-medium text-ink">${RANGE_LABEL[r]}</span> · mock data`;
+}
+
+$('#rangeGroup').addEventListener('click', (e) => {
+  const btn = e.target.closest('.range-btn');
+  if (!btn) return;
+  setRange(btn.dataset.range);
+});
+
+$('#channelFilter').addEventListener('change', (e) => {
+  const v = e.target.value;
+  toast(v === 'All channels' ? 'Showing all channels' : `Filtered to ${v} · demo`);
+});
+
+/* Refresh: hold the previous render at reduced opacity (no skeleton flash) */
+$('#refreshBtn').addEventListener('click', () => {
+  const nodes = $$('main canvas, .data-table');
+  nodes.forEach((el) => (el.style.opacity = '.45'));
+  setTimeout(() => {
+    setRange($('.range-btn[aria-pressed="true"]')?.dataset.range || 30);
+    nodes.forEach((el) => (el.style.opacity = ''));
+    toast('Dashboard refreshed');
+  }, 700);
+});
+
+$('#exportBtn').addEventListener('click', () => toast('Export queued — CSV (demo)'));
+
+/* ============================================================
+   9. TABS
+   ============================================================ */
+const TAB_META = {
+  overview:  { title: 'E-commerce Analytics',      subtitle: 'Revenue, business results & marketing performance' },
+  employees: { title: 'Top 10 Sales Employees',    subtitle: 'Outstanding sellers ranked by revenue this month' },
+  regions:   { title: 'Regional Revenue',          subtitle: 'Revenue and growth by geographic region' },
+};
+
+function activateTab(name, { focus = false } = {}) {
+  const tabs = $$('.tab-btn');
+  tabs.forEach((btn) => {
+    const on = btn.dataset.tab === name;
+    btn.setAttribute('aria-selected', String(on));
+    if (on && focus) btn.focus();
+  });
+
+  $$('.tab-panel').forEach((panel) => {
+    panel.hidden = panel.id !== `panel-${name}`;
+  });
+
+  $$('.nav-item').forEach((item) => {
+    const on = item.dataset.goto === name;
+    item.classList.toggle('bg-brand/10', on);
+    item.classList.toggle('text-brand-soft', on);
+    item.classList.toggle('text-muted', !on);
+  });
+
+  const meta = TAB_META[name];
+  $('#pageTitle').textContent = meta.title;
+  $('#pageSubtitle').textContent = meta.subtitle;
+  document.title = `${meta.title} — Northwind`;
+
+  // Resize charts in the newly shown panel (canvases start hidden → 0 width)
+  requestAnimationFrame(() => {
+    Chart.getChart($('#employeeChart'))?.resize();
+    Chart.getChart($('#regionBarChart'))?.resize();
+    Chart.getChart($('#regionGrowthChart'))?.resize();
+  });
+}
+
+$$('.tab-btn').forEach((btn, i, all) => {
+  btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  btn.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const dir  = e.key === 'ArrowRight' ? 1 : -1;
+    const next = all[(i + dir + all.length) % all.length];
+    activateTab(next.dataset.tab, { focus: true });
+  });
+});
+
+$$('.nav-item').forEach((item) => {
+  item.addEventListener('click', () => activateTab(item.dataset.goto));
+});
+
+/* ============================================================
+   10. INIT
+   ============================================================ */
+renderCategoryTable();
+renderChannelLegend();
+renderFunnel();
+renderTrafficTable();
+renderCampaignTable();
+renderProductsTable();
+renderEmployeeSummary();
+renderEmployeeTable();
+renderRegionSummary();
+renderRegionTable();
+renderRegionDetailTable();
+setRange(30);
+activateTab('overview');
+lucide.createIcons();
+
+/* ============================================================
+   11. TOAST
+   ============================================================ */
+let toastTimer;
+function toast(message) {
+  const el = $('#toast');
+  $('#toastMsg').textContent = message;
+  el.classList.remove('opacity-0', 'translate-y-4', 'scale-95');
+  el.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.add('opacity-0', 'translate-y-4', 'scale-95');
+    el.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
+  }, 2200);
+}
+</script>
+</body>
+</html>

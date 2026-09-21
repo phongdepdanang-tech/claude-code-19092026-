@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign in — Northwind</title>
+<meta name="description" content="Sign in to your Northwind account." />
+
+<!-- Fonts: Poppins (headings) + Inter (body) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          base:  '#090A14',   // page background
+          panel: '#0E1020',   // card surface
+          field: '#12142A',   // input surface
+          line:  '#22243C',   // borders
+          brand: {
+            DEFAULT: '#DF6B33',
+            hover:   '#E77E4A',
+            soft:    '#F0A379',
+            deep:    '#A94A1D',
+          },
+          ink:   '#F4F5FA',   // primary text
+          muted: '#8B90A8',   // secondary text
+          danger: {
+            DEFAULT: '#FF5D64',
+            soft:    '#FF8A90',
+            faint:   '#2A1420',
+          },
+        },
+        fontFamily: {
+          display: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          sans:    ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        },
+        boxShadow: {
+          glow: '0 0 0 1px rgba(223,107,51,.35), 0 12px 40px -12px rgba(223,107,51,.55)',
+          card: '0 24px 70px -30px rgba(0,0,0,.9)',
+        },
+        keyframes: {
+          rise: {
+            '0%':   { opacity: '0', transform: 'translateY(14px)' },
+            '100%': { opacity: '1', transform: 'translateY(0)' },
+          },
+          'field-error': {
+            '0%, 100%': { transform: 'translateX(0)' },
+            '20%':      { transform: 'translateX(-5px)' },
+            '40%':      { transform: 'translateX(5px)' },
+            '60%':      { transform: 'translateX(-3px)' },
+            '80%':      { transform: 'translateX(3px)' },
+          },
+        },
+        animation: {
+          rise: 'rise .55s cubic-bezier(.22,1,.36,1) both',
+          'field-error': 'field-error .4s cubic-bezier(.36,.07,.19,.97) both',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  html { -webkit-tap-highlight-color: transparent; }
+  body { background-color: #090A14; }
+
+  /* Autofill: kill the default white/yellow wash on dark inputs */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #F4F5FA;
+    -webkit-box-shadow: 0 0 0 1000px #12142A inset;
+    box-shadow: 0 0 0 1000px #12142A inset;
+    transition: background-color 9999s ease-in-out 0s;
+    caret-color: #F4F5FA;
+  }
+
+  /* Brand-tinted caret + selection */
+  ::selection { background: rgba(223,107,51,.3); color: #fff; }
+
+  /* Custom scrollbar (desktop) */
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: #090A14; }
+  ::-webkit-scrollbar-thumb { background: #22243C; border-radius: 999px; border: 3px solid #090A14; }
+  ::-webkit-scrollbar-thumb:hover { background: #33365A; }
+
+  /* Lucide icons inherit text color and stay crisp */
+  [data-lucide] { stroke-width: 1.9; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+
+<body class="min-h-full font-sans text-ink antialiased selection:bg-brand/30">
+
+<!-- ============ PAGE SHELL ============ -->
+<div class="relative flex min-h-screen w-full overflow-hidden">
+
+  <!-- Ambient background glows -->
+  <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+    <div class="absolute -top-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-brand/20 blur-[120px]"></div>
+    <div class="absolute bottom-[-12rem] right-[-6rem] h-[26rem] w-[26rem] rounded-full bg-brand-deep/25 blur-[130px]"></div>
+    <div class="absolute inset-0 opacity-[.035]"
+         style="background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:56px 56px;"></div>
+  </div>
+
+  <!-- ============ SIGN-IN FORM ============ -->
+  <main class="flex w-full flex-1 items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
+    <div class="w-full max-w-[26rem] animate-rise">
+
+      <!-- Logo -->
+      <a href="#" class="mx-auto mb-8 flex w-fit items-center gap-2.5">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white">
+          <i data-lucide="hexagon" class="h-5 w-5"></i>
+        </span>
+        <span class="font-display text-lg font-bold tracking-tight">Northwind</span>
+      </a>
+
+      <!-- Heading -->
+      <header class="mb-8">
+        <h2 class="font-display text-[26px] font-extrabold leading-tight tracking-tight sm:text-3xl">
+          Welcome back
+        </h2>
+        <p class="mt-2 text-sm text-muted">
+          Sign in to continue to your workspace.
+        </p>
+      </header>
+
+      <!-- ============ FORM ============ -->
+      <form id="loginForm" class="space-y-5" novalidate>
+
+        <!-- Email -->
+        <div>
+          <label for="email" class="mb-2 block text-[13px] font-medium text-ink/90">Email address</label>
+          <div class="group relative">
+            <i data-lucide="mail"
+               class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted transition-colors group-focus-within:text-brand"></i>
+            <input
+              id="email" name="email" type="email" inputmode="email" autocomplete="email"
+              placeholder="you@company.com" required
+              aria-describedby="emailError"
+              class="h-12 w-full rounded-xl border border-line bg-field pl-11 pr-4 text-[15px] text-ink placeholder:text-muted/70
+                     transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15" />
+          </div>
+          <p id="emailError" class="mt-1.5 hidden items-center gap-1.5 text-xs text-danger animate-field-error">
+            <i data-lucide="alert-circle" class="h-3.5 w-3.5"></i><span>Enter a valid email address.</span>
+          </p>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <div class="mb-2 flex items-baseline justify-between gap-3">
+            <label for="password" class="block text-[13px] font-medium text-ink/90">Password</label>
+            <a href="#" class="text-[13px] font-medium text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">
+              Forgot password?
+            </a>
+          </div>
+          <div class="group relative">
+            <i data-lucide="lock"
+               class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted transition-colors group-focus-within:text-brand"></i>
+            <input
+              id="password" name="password" type="password" autocomplete="current-password"
+              placeholder="••••••••••" required
+              aria-describedby="passwordError"
+              class="h-12 w-full rounded-xl border border-line bg-field pl-11 pr-12 text-[15px] text-ink placeholder:text-muted/70
+                     transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15" />
+            <button type="button" id="togglePassword" aria-label="Show password" aria-pressed="false"
+                    class="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-muted
+                           transition hover:bg-white/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60">
+              <i data-lucide="eye" class="h-[18px] w-[18px]"></i>
+            </button>
+          </div>
+          <p id="passwordError" class="mt-1.5 hidden items-center gap-1.5 text-xs text-danger animate-field-error">
+            <i data-lucide="alert-circle" class="h-3.5 w-3.5"></i><span>Password must be at least 8 characters.</span>
+          </p>
+        </div>
+
+        <!-- Remember me -->
+        <div class="flex items-center pt-1">
+          <label for="remember" class="group flex cursor-pointer select-none items-center gap-2.5">
+            <span class="relative grid place-items-center">
+              <input id="remember" name="remember" type="checkbox"
+                     class="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-[6px] border border-line bg-field
+                            transition checked:border-brand checked:bg-brand
+                            focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-base" />
+              <i data-lucide="check" class="pointer-events-none absolute h-3 w-3 text-white opacity-0 transition-opacity peer-checked:opacity-100"></i>
+            </span>
+            <span class="text-sm text-muted transition-colors group-hover:text-ink">Remember me for 30 days</span>
+          </label>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit"
+                class="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[15px] font-semibold text-white
+                       shadow-[0_10px_30px_-12px_rgba(223,107,51,.9)] transition
+                       hover:bg-brand-hover hover:shadow-[0_14px_36px_-12px_rgba(223,107,51,1)]
+                       focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/30
+                       active:scale-[.985] disabled:cursor-not-allowed disabled:opacity-60">
+          <span id="submitLabel">Sign in</span>
+          <i data-lucide="arrow-right" class="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5"></i>
+        </button>
+
+        <!-- Divider -->
+        <div class="relative py-2" role="separator" aria-label="Or continue with">
+          <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-line"></span></div>
+          <div class="relative flex justify-center">
+            <span class="bg-base px-3 text-xs uppercase tracking-wider text-muted">Or continue with</span>
+          </div>
+        </div>
+
+        <!-- Social login -->
+        <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
+          <button type="button" data-provider="Google"
+                  class="flex h-12 items-center justify-center gap-2 rounded-xl border border-line bg-field/70 text-sm font-medium text-ink
+                         transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 active:scale-[.98]">
+            <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+              <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+              <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+              <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+            </svg>
+            <span>Google</span>
+          </button>
+
+          <button type="button" data-provider="GitHub"
+                  class="flex h-12 items-center justify-center gap-2 rounded-xl border border-line bg-field/70 text-sm font-medium text-ink
+                         transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 active:scale-[.98]">
+            <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23a11.5 11.5 0 0 1 3-.405c1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12z"/>
+            </svg>
+            <span>GitHub</span>
+          </button>
+
+          <button type="button" data-provider="Facebook"
+                  class="flex h-12 items-center justify-center gap-2 rounded-xl border border-line bg-field/70 text-sm font-medium text-ink
+                         transition hover:border-brand/40 hover:bg-field focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 active:scale-[.98]">
+            <svg class="h-[18px] w-[18px] shrink-0 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647z"/>
+            </svg>
+            <span>Facebook</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Sign up -->
+      <p class="mt-8 text-center text-sm text-muted">
+        Don't have an account?
+        <a href="register.html" class="font-semibold text-brand transition hover:text-brand-soft focus:outline-none focus-visible:underline">
+          Create one
+        </a>
+      </p>
+
+      <!-- Legal -->
+      <p class="mt-6 text-center text-[11px] leading-relaxed text-muted/70">
+        Protected by reCAPTCHA. By signing in you agree to our
+        <a href="#" class="underline underline-offset-2 transition hover:text-muted">Terms</a> and
+        <a href="#" class="underline underline-offset-2 transition hover:text-muted">Privacy Policy</a>.
+      </p>
+    </div>
+  </main>
+</div>
+
+<!-- Toast for demo interactions -->
+<div id="toast" role="status" aria-live="polite"
+     class="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 translate-y-4 scale-95 rounded-xl border border-line
+            bg-panel/95 px-4 py-3 text-sm text-ink opacity-0 shadow-card backdrop-blur transition-all duration-300">
+  <span id="toastMsg">Done</span>
+</div>
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  /* ---------- Password visibility toggle ---------- */
+  const pwd     = $('#password');
+  const toggle  = $('#togglePassword');
+  const eyeIcon = toggle.querySelector('svg, i');
+
+  toggle.addEventListener('click', () => {
+    const show = pwd.type === 'password';
+    pwd.type = show ? 'text' : 'password';
+    toggle.setAttribute('aria-pressed', String(show));
+    toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+
+    // Swap the Lucide glyph in place
+    const next = document.createElement('i');
+    next.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+    next.className = 'h-[18px] w-[18px]';
+    eyeIcon.replaceWith(next);
+    lucide.createIcons({ nameAttr: 'data-lucide' });
+  });
+
+  /* ---------- Validation helpers ---------- */
+  const setError = (inputId, errorId, invalid) => {
+    const input = document.getElementById(inputId);
+    const err   = document.getElementById(errorId);
+    input.classList.toggle('border-danger/70', invalid);
+    input.classList.toggle('focus:border-danger', invalid);
+    input.classList.toggle('ring-4', invalid);
+    input.classList.toggle('ring-danger/15', invalid);
+    input.setAttribute('aria-invalid', String(invalid));
+    err.classList.toggle('hidden', !invalid);
+    err.classList.toggle('flex', invalid);
+  };
+
+  /* Clear the error as soon as the user starts fixing it */
+  ['email', 'password'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', () =>
+      setError(id, `${id}Error`, false)
+    );
+  });
+
+  /* ---------- Submit ---------- */
+  const form  = $('#loginForm');
+  const label = $('#submitLabel');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const email    = $('#email').value.trim();
+    const password = $('#password').value;
+    const emailOk    = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+    const passwordOk = password.length >= 8;
+
+    setError('email', 'emailError', !emailOk);
+    setError('password', 'passwordError', !passwordOk);
+
+    if (!emailOk)    return $('#email').focus();
+    if (!passwordOk) return $('#password').focus();
+
+    // Demo submit state — wire this to your real endpoint.
+    label.textContent = 'Signing in…';
+    form.querySelector('button[type="submit"]').disabled = true;
+
+    setTimeout(() => {
+      label.textContent = 'Sign in';
+      form.querySelector('button[type="submit"]').disabled = false;
+      toast('Signed in — redirecting…');
+      // location.href = '/dashboard';
+    }, 1100);
+  });
+
+  /* ---------- Social buttons ---------- */
+  document.querySelectorAll('[data-provider]').forEach((btn) => {
+    btn.addEventListener('click', () => toast(`Continuing with ${btn.dataset.provider}…`));
+  });
+
+  /* ---------- Toast ---------- */
+  let toastTimer;
+  function toast(message) {
+    const el = $('#toast');
+    $('#toastMsg').textContent = message;
+    el.classList.remove('opacity-0', 'translate-y-4', 'scale-95');
+    el.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      el.classList.add('opacity-0', 'translate-y-4', 'scale-95');
+      el.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
+    }, 2200);
+  }
+</script>
+</body>
+</html>
